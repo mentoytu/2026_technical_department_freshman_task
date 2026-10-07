@@ -1,0 +1,2505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>校园失物招领 · 首页</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ---------- 时间筛选标签 ---------- */
+    .chip {
+      display: inline-flex; align-items: center; gap: .25rem;
+      padding: .42rem .8rem; border-radius: 9999px;
+      font-size: 12px; line-height: 1; white-space: nowrap;
+      background: #f1f5f9; color: #64748b; transition: all .2s ease;
+    }
+    .chip:hover { background: #e2e8f0; }
+    .chip-active { background: #2563eb; color: #fff; box-shadow: 0 6px 14px -4px rgba(37, 99, 235, .65); }
+
+    /* ---------- 地点 / 信息标签（按建筑配色） ---------- */
+    .place-chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .42rem .75rem; border-radius: 9999px;
+      font-size: 12px; line-height: 1; font-weight: 500; white-space: nowrap;
+      border: 1px solid transparent; transition: all .18s ease; text-decoration: none;
+    }
+    button.place-chip { cursor: pointer; }
+    .place-chip:hover { filter: brightness(.96); transform: translateY(-1px); }
+    .place-chip.active { outline: 2px solid currentColor; outline-offset: 1px; }
+
+    /* 纯信息标签（如卡片上的手机号）：不可点击、无 hover 效果 */
+    .static-chip, .static-chip:hover { filter: none; transform: none; cursor: default; }
+
+    .tone-blue    { background: #eff6ff; color: #2563eb; border-color: #dbeafe; }
+    .tone-violet  { background: #f5f3ff; color: #7c3aed; border-color: #ede9fe; }
+    .tone-indigo  { background: #eef2ff; color: #4f46e5; border-color: #e0e7ff; }
+    .tone-cyan    { background: #ecfeff; color: #0891b2; border-color: #cffafe; }
+    .tone-teal    { background: #f0fdfa; color: #0d9488; border-color: #ccfbf1; }
+    .tone-emerald { background: #ecfdf5; color: #059669; border-color: #d1fae5; }
+    .tone-amber   { background: #fffbeb; color: #d97706; border-color: #fef3c7; }
+    .tone-orange  { background: #fff7ed; color: #ea580c; border-color: #ffedd5; }
+    .tone-rose    { background: #fff1f2; color: #e11d48; border-color: #ffe4e6; }
+    .tone-slate   { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .tone-other   { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+    /* ---------- 搜索栏展开区 ---------- */
+    #filterPanel {
+      max-height: 0; opacity: 0; overflow: hidden;
+      transition: max-height .35s cubic-bezier(.4, 0, .2, 1), opacity .25s ease;
+    }
+    #filterPanel.open { max-height: 780px; opacity: 1; }
+
+    /* ---------- 显示选择下拉 ---------- */
+    #statusMenu { display: none; }
+    #statusMenu.open { display: block; }
+    .menu-item {
+      display: flex; width: 100%; align-items: center; justify-content: space-between; gap: .5rem;
+      padding: .6rem .75rem; border-radius: .6rem; font-size: 12px; color: #475569; transition: background .18s;
+    }
+    .menu-item:hover { background: #f8fafc; }
+    .menu-item.active { background: #eff6ff; color: #2563eb; font-weight: 600; }
+
+    /* ---------- 底部弹层（通用） ---------- */
+    .sheet { display: none; }
+    .sheet.show { display: block; }
+    .sheet .mask { opacity: 0; transition: opacity .3s ease; }
+    .sheet .panel {
+      left: 50%; bottom: 0; width: 100%; max-width: 430px;
+      transform: translate(-50%, 100%);
+      transition: transform .36s cubic-bezier(.32, .72, 0, 1);
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+    .sheet.open .mask { opacity: 1; }
+    .sheet.open .panel { transform: translate(-50%, 0); }
+
+    /* ---------- 发布表单 ---------- */
+    .f-label { display: block; margin-bottom: .5rem; font-size: 12px; font-weight: 700; color: #334155; }
+    .f-input {
+      width: 100%; border: 1px solid #e2e8f0; border-radius: .85rem;
+      padding: .7rem .85rem; font-size: 13px; color: #334155; outline: none;
+      transition: border-color .2s;
+    }
+    .f-input:focus { border-color: #60a5fa; }
+    .f-input::placeholder { color: #94a3b8; }
+    .type-btn {
+      border: 1px solid #e2e8f0; border-radius: .9rem; padding: .7rem .8rem;
+      text-align: left; font-size: 13px; font-weight: 600; color: #475569;
+      background: #fff; transition: all .2s;
+    }
+    .type-btn span { display: block; margin-top: .2rem; font-size: 10px; font-weight: 400; color: #94a3b8; }
+    .type-btn.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+    .type-btn.active span { color: #60a5fa; }
+
+    /* ---------- 其它 ---------- */
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity: .45; }
+
+    /* ---------- 全屏视图（物品详情 / 聊天） ---------- */
+    .view { display: none; }
+    .view.show { display: block; }
+    .view .view-panel { transform: translateX(100%); transition: transform .3s cubic-bezier(.32, .72, 0, 1); }
+    .view.open .view-panel { transform: translateX(0); }
+
+    /* ---------- 滚动时出现的简化搜索框 ---------- */
+    #miniSearch { max-height: 0; opacity: 0; overflow: hidden; transition: max-height .28s ease, opacity .22s ease; }
+    #miniSearch.open { max-height: 60px; opacity: 1; }
+
+    /* ---------- 回到顶部按钮 ---------- */
+    #toTopBtn { opacity: 0; transform: translateY(10px) scale(.85); pointer-events: none; transition: all .25s ease; }
+    #toTopBtn.open { opacity: 1; transform: none; pointer-events: auto; }
+
+    /* ---------- 详情页图片左右切换键（半透明，鼠标靠近 / 点击附近才显示） ---------- */
+    #detailGalleryWrap .gal-nav { opacity: 0; }
+    #detailGalleryWrap:hover .gal-nav,
+    #detailGalleryWrap.show-nav .gal-nav { opacity: 1; }
+    @media (hover: none) {
+      #detailGalleryWrap .gal-nav { opacity: 0; }
+      #detailGalleryWrap.show-nav .gal-nav { opacity: 1; }
+    }
+    /* 编辑态图片拖动排序 */
+    [data-img-item].dragging { opacity: .35; }
+    [data-img-item].drop-target { outline: 2px solid #60a5fa; outline-offset: 1px; }
+
+    /* ---------- 悬浮按钮的浅色功能提示 ---------- */
+    .fab-tip {
+      position: absolute; right: calc(100% + 10px); top: 50%;
+      transform: translateY(-50%) translateX(6px);
+      white-space: nowrap; padding: .35rem .6rem; border-radius: .6rem;
+      background: #ffffff; color: #475569; font-size: 11px; font-weight: 500;
+      border: 1px solid #e2e8f0; box-shadow: 0 8px 20px -8px rgba(15, 23, 42, .45);
+      opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    }
+    #toTopBtn:hover .fab-tip, #fabBtn:hover .fab-tip { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+    /* ---------- 个人中心：右侧抽屉（不完全覆盖首页，首页保持模糊变暗） ---------- */
+    #pcSheet .panel {
+      left: auto;
+      right: max(0px, calc((100vw - 430px) / 2));
+      top: 0; bottom: 0; height: 100%;
+      width: 86%; max-width: 380px;
+      transform: translateX(100%);
+      border-radius: 1.5rem 0 0 1.5rem;
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+    }
+    #pcSheet.open .panel { transform: translateX(0); }
+
+    #toast {
+      position: fixed; left: 50%; bottom: 108px; z-index: 80;
+      transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+      padding: .6rem 1rem; border-radius: 9999px;
+      background: rgba(15, 23, 42, .88); color: #fff; font-size: 12px;
+      transition: all .28s ease; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <main class="mx-auto min-h-screen w-full max-w-[430px] bg-slate-50 pb-28 shadow-xl">
+
+    <!-- ===== 顶部区域 ===== -->
+    <header class="rounded-b-[2rem] bg-gradient-to-br from-blue-600 to-sky-500 px-5 pb-7 pt-9 text-white">
+
+      <!-- 左上：校区切换；右上：个人中心（未登录显示“未登录”，登录后显示爱心） -->
+      <div class="mb-5 flex items-center justify-between">
+        <button id="campusBtn" aria-haspopup="dialog" aria-expanded="false"
+          class="flex items-center gap-2 rounded-full bg-white/15 py-2 pl-3 pr-2.5 text-sm font-medium backdrop-blur transition hover:bg-white/25 active:scale-[.97]">
+          <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11Z"></path>
+            <circle cx="12" cy="10" r="2.5"></circle>
+          </svg>
+          <span id="campusBtnText">东校区</span>
+          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </span>
+        </button>
+
+        <button id="accountBtn" aria-label="个人中心" aria-haspopup="dialog"
+          class="flex h-11 items-center justify-center rounded-full bg-white/15 px-3 backdrop-blur transition hover:bg-white/25"></button>
+      </div>
+
+      <!-- 标题 -->
+      <div class="mb-5">
+        <p class="text-sm text-blue-100">校园互助 · 让失物早日回家</p>
+        <h1 class="mt-1 text-2xl font-bold">失物招领</h1>
+      </div>
+
+      <!-- ===== 搜索栏（可展开：时间 + 地点筛选） ===== -->
+      <div id="searchCard" class="overflow-hidden rounded-2xl bg-white shadow-lg shadow-blue-900/10">
+        <div class="flex items-center gap-3 px-4 py-3.5">
+          <svg class="h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m20 20-4-4"></path>
+          </svg>
+          <input id="searchInput" type="search" placeholder="搜索校园卡、耳机等关键词"
+            class="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400" />
+          <button id="filterToggle" type="button" aria-expanded="false" aria-controls="filterPanel" aria-label="展开筛选条件"
+            class="flex shrink-0 items-center gap-1 rounded-full bg-slate-100 py-1.5 pl-2.5 pr-2 text-[11px] font-medium text-slate-500 transition hover:bg-slate-200">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M4 6h16M7 12h10M10 18h4"></path>
+            </svg>
+            <span id="filterToggleText">筛选</span>
+            <svg id="filterChevron" class="h-3.5 w-3.5 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div id="filterPanel">
+          <div class="border-t border-slate-100 px-4 pb-4 pt-3.5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-bold text-slate-700">丢失时间</p>
+              <button id="resetFilter" type="button" class="text-[11px] text-slate-400 transition hover:text-blue-600">重置</button>
+            </div>
+            <div id="timeChips" class="mt-3 flex flex-wrap gap-2">
+              <button type="button" class="chip chip-active" data-time="all">不限</button>
+              <button type="button" class="chip" data-time="today">今天</button>
+              <button type="button" class="chip" data-time="3d">近 3 天</button>
+              <button type="button" class="chip" data-time="7d">近一周</button>
+              <button type="button" class="chip" data-time="30d">近一月</button>
+              <button type="button" class="chip" data-time="custom">
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <rect x="3" y="5" width="18" height="16" rx="3"></rect>
+                  <path d="M8 3v4M16 3v4M3 11h18"></path>
+                </svg>
+                自定义
+              </button>
+            </div>
+
+            <div id="customRange" class="mt-3 hidden gap-2">
+              <label class="flex-1 rounded-xl border border-slate-200 px-3 py-2">
+                <span class="block text-[10px] text-slate-400">开始日期</span>
+                <input id="dateStart" type="date" class="mt-0.5 w-full bg-transparent text-xs text-slate-700 outline-none" />
+              </label>
+              <label class="flex-1 rounded-xl border border-slate-200 px-3 py-2">
+                <span class="block text-[10px] text-slate-400">结束日期</span>
+                <input id="dateEnd" type="date" class="mt-0.5 w-full bg-transparent text-xs text-slate-700 outline-none" />
+              </label>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3.5">
+              <p class="text-xs font-bold text-slate-700">地点</p>
+              <span class="text-[11px] text-slate-400">当前：<span id="placeScopeHint">东校区</span></span>
+            </div>
+            <div id="placeChips" class="mt-3 flex flex-wrap gap-2"></div>
+            <p class="mt-2.5 text-[11px] leading-relaxed text-slate-400">
+              两个校区的建筑与场所不同：东校区为图书馆 / 教学楼 / 食堂 / 操场 / 宿舍，西校区为实验楼 / 体育馆 / 礼堂 / 实训中心 / 西区食堂 / 宿舍；切换校区后可选地点同步更新。
+            </p>
+
+            <div class="mt-3.5 flex gap-2">
+              <button id="cancelFilter" type="button" class="flex-1 rounded-xl bg-slate-100 py-2.5 text-xs font-medium text-slate-500 transition hover:bg-slate-200">收起</button>
+              <button id="applyFilter" type="button" class="flex-[1.6] rounded-xl bg-blue-600 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[.99]">查看结果</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-4 text-sm text-blue-50">
+        <span id="hintText">今天也许就能找到它</span> · <span id="countHint" class="font-semibold">0</span> 条动态
+        <span id="connBadge" class="ml-1 text-[11px] text-blue-100/70"></span>
+      </p>
+    </header>
+
+    <!-- ===== 分类标签（原 3 个 + 我丢失的物品 / 我找到的失物） ===== -->
+    <nav class="sticky top-0 z-10 border-b border-slate-100 bg-slate-50/95 backdrop-blur">
+      <!-- 搜索框被覆盖后，上滑时先出现的简化搜索框 -->
+      <div id="miniSearch">
+        <div class="px-5 pt-2.5">
+          <div class="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 shadow-sm ring-1 ring-slate-200">
+            <svg class="h-4 w-4 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <input id="miniSearchInput" type="search" placeholder="搜索校园卡、耳机等关键词"
+              class="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400" />
+          </div>
+        </div>
+      </div>
+      <div id="tabBar" class="no-scrollbar flex gap-6 overflow-x-auto px-5"></div>
+    </nav>
+
+    <!-- ===== 最新动态 ===== -->
+    <section class="px-5 pt-5">
+      <div class="mb-4 flex items-end justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="text-lg font-bold text-slate-800">最新动态</h2>
+          <p id="resultHint" class="mt-1 truncate text-xs text-slate-400">东校区 · 全部时间</p>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-2">
+          <button class="text-[11px] text-slate-400">最新发布⌄</button>
+          <div class="relative" id="statusFilterWrap">
+            <button id="statusFilterBtn" type="button" aria-haspopup="menu" aria-expanded="false"
+              class="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-500 shadow-sm transition hover:border-slate-300">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"></path>
+                <circle cx="12" cy="12" r="2.5"></circle>
+              </svg>
+              <span id="statusFilterText">显示所有</span>
+              <svg id="statusChevron" class="h-3.5 w-3.5 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6 9 6 6 6-6"></path>
+              </svg>
+            </button>
+            <div id="statusMenu" role="menu" aria-label="显示选择"
+              class="absolute right-0 top-full z-20 mt-2 w-36 rounded-xl border border-slate-100 bg-white p-1 shadow-xl"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="cardList" class="space-y-3.5"></div>
+
+      <!-- 空状态（内容随场景变化） -->
+      <div id="emptyState" class="mt-3.5 hidden rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center"></div>
+    </section>
+
+    <!-- 悬浮按钮组：回到顶部（下滑时浮现）+ 发布（加号已缩小 1/10） -->
+    <div class="fixed bottom-7 right-[max(1.5rem,calc((100vw-430px)/2+1.5rem))] z-20 flex flex-col items-center gap-3">
+      <button id="toTopBtn" type="button" aria-label="回到顶部"
+        class="relative flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 15 6-6 6 6"></path>
+        </svg>
+        <span class="fab-tip">回到顶部</span>
+      </button>
+      <button id="fabBtn" aria-label="发布失物或招领信息"
+        class="relative flex h-[50px] w-[50px] items-center justify-center rounded-full bg-blue-600 text-2xl font-light text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-95">
+        +
+        <span class="fab-tip">发布信息</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ===== 校区切换弹层（仅两个校区） ===== -->
+  <div id="campusSheet" class="sheet fixed inset-0 z-50" role="dialog" aria-modal="true">
+    <div class="mask absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" data-close></div>
+    <div class="panel absolute rounded-t-3xl bg-white px-5 pt-4 shadow-2xl">
+      <div class="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-200"></div>
+      <div class="mb-1 flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-800">选择校区</h2>
+        <button class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200" data-close aria-label="关闭">✕</button>
+      </div>
+      <p class="mb-3 text-xs text-slate-400">切换后仅显示该校区发布的失物与招领信息，可选地点同步更新</p>
+      <div id="campusList" class="space-y-2 pb-1"></div>
+    </div>
+  </div>
+
+  <!-- ===== 个人中心弹层 ===== -->
+  <div id="pcSheet" class="sheet fixed inset-0 z-[75]" role="dialog" aria-modal="true">
+    <div class="mask absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" data-close></div>
+    <div class="panel absolute overflow-y-auto bg-white px-5 pt-5 shadow-2xl">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 id="pcTitle" class="text-base font-bold text-slate-800">个人中心</h2>
+        <button class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200" data-close aria-label="关闭">✕</button>
+      </div>
+      <div id="pcBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== 发布弹层 ===== -->
+  <div id="pubSheet" class="sheet fixed inset-0 z-50" role="dialog" aria-modal="true">
+    <div class="mask absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" data-close></div>
+    <div class="panel absolute max-h-[92vh] overflow-y-auto rounded-t-3xl bg-white px-5 pt-4 shadow-2xl">
+      <div class="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-200"></div>
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-800">发布信息</h2>
+          <p class="mt-0.5 text-[11px] text-slate-400">发布后将出现在对应栏目中</p>
+        </div>
+        <button class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200" data-close aria-label="关闭">✕</button>
+      </div>
+
+      <p class="f-label">发布类型</p>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" class="type-btn active" data-pub-type="lost">我丢失的物品<span>我丢了东西，求线索</span></button>
+        <button type="button" class="type-btn" data-pub-type="found">我找到的失物<span>我捡到东西，找失主</span></button>
+      </div>
+
+      <p class="f-label mt-4">物品图片（可选 · 可多张）</p>
+      <div id="pubImageList" class="flex flex-wrap gap-2"></div>
+      <p class="mt-2 text-[11px] text-slate-400">支持 JPG / PNG，可上传多张，首页仅显示第一张图片</p>
+      <input id="pubImage" type="file" accept="image/*" multiple class="hidden" />
+
+      <p class="f-label mt-4">物品名称</p>
+      <input id="pubTitle" class="f-input" placeholder="如：校园卡 / 白色无线耳机" maxlength="20" />
+
+      <p class="f-label mt-4">物品描述</p>
+      <textarea id="pubDesc" rows="2" class="f-input resize-none" placeholder="颜色、特征、有无贴纸等"></textarea>
+
+      <p class="f-label mt-4">校区</p>
+      <div id="pubCampusChips" class="flex flex-wrap gap-2"></div>
+
+      <p class="f-label mt-4">地点标签<span class="ml-2 font-normal text-slate-400">（对应下方地点筛选）</span></p>
+      <div id="pubPlaceChips" class="flex flex-wrap gap-2"></div>
+
+      <p class="f-label mt-4">补充信息</p>
+      <input id="pubPlaceInfo" class="f-input" placeholder="如：一楼大厅 · 自助借还机旁" maxlength="24" />
+
+      <p class="f-label mt-4">丢失 / 拾取时间</p>
+      <div id="pubDateQuick" class="mb-2 flex flex-wrap gap-2">
+        <button type="button" class="chip chip-active" data-day="0">今天</button>
+        <button type="button" class="chip" data-day="1">昨天</button>
+        <button type="button" class="chip" data-day="2">前天</button>
+      </div>
+      <input id="pubDate" type="date" class="f-input" />
+
+      <p class="f-label mt-4">联系方式（手机号）</p>
+      <input id="pubPhone" type="tel" maxlength="13" class="f-input" placeholder="11 位手机号，失主 / 拾主可直接联系你" />
+
+      <p id="pubError" class="mt-3 hidden text-xs text-rose-500"></p>
+
+      <button id="pubSubmit" type="button"
+        class="mt-4 w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[.99]">
+        发布
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== 物品详情页 ===== -->
+  <div id="detailView" class="view fixed inset-0 z-[60]" role="dialog" aria-modal="true">
+    <div class="view-panel relative mx-auto flex h-full w-full max-w-[430px] flex-col bg-slate-50">
+      <div id="detailScroll" class="flex-1 overflow-y-auto pb-28">
+        <div id="detailGalleryWrap" class="relative bg-slate-100">
+          <div id="detailGallery" class="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"></div>
+          <div id="detailNoImg" class="hidden h-64 w-full items-center justify-center bg-slate-200">
+            <span class="text-sm font-medium text-slate-400">无图片</span>
+          </div>
+          <button id="galPrev" type="button" aria-label="上一张"
+            class="gal-nav absolute left-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/55">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+          </button>
+          <button id="galNext" type="button" aria-label="下一张"
+            class="gal-nav absolute right-3 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/55">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+          </button>
+          <div id="detailDots" class="pointer-events-none absolute bottom-7 left-0 right-0 flex justify-center gap-1.5"></div>
+          <button type="button" data-view-close="detailView" aria-label="返回"
+            class="absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition hover:bg-black/50">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+          </button>
+        </div>
+
+        <div class="relative -mt-5 rounded-t-3xl bg-slate-50 px-5 pt-5">
+          <div id="detailBody"></div>
+        </div>
+      </div>
+
+      <!-- 右下角：联系对方 / 修改信息 / 保存 -->
+      <div class="pointer-events-none absolute inset-x-0 bottom-0">
+        <div class="flex justify-end gap-2 px-5 pb-6">
+          <button id="editCancelBtn" type="button"
+            class="pointer-events-auto hidden rounded-full bg-white px-5 py-3.5 text-sm font-semibold text-slate-500 shadow-lg ring-1 ring-slate-200 transition hover:bg-slate-50">
+            取消
+          </button>
+          <button id="detailActionBtn" type="button"
+            class="pointer-events-auto flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 active:scale-95">
+            <span id="detailActionText">联系对方</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 聊天界面 ===== -->
+  <div id="chatView" class="view fixed inset-0 z-[70]" role="dialog" aria-modal="true">
+    <div class="view-panel mx-auto flex h-full w-full max-w-[430px] flex-col bg-slate-100">
+      <!-- 顶栏 -->
+      <div class="flex items-center gap-3 border-b border-slate-200 bg-white px-3 py-2.5">
+        <button type="button" data-view-close="chatView" aria-label="返回"
+          class="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+        </button>
+        <button type="button" id="chatAvatar" aria-label="查看对方个人中心"
+          class="flex h-9 w-9 items-center justify-center rounded-full text-sm"></button>
+        <p id="chatName" class="truncate text-sm font-semibold text-slate-700"></p>
+      </div>
+
+      <!-- 消息列表 -->
+      <div id="chatMessages" class="flex-1 space-y-3 overflow-y-auto px-3.5 py-4"></div>
+
+      <!-- 表情面板 -->
+      <div id="emojiPanel" class="hidden border-t border-slate-200 bg-white px-3 pb-3 pt-2">
+        <div id="emojiGrid" class="grid grid-cols-8 gap-1"></div>
+      </div>
+
+      <!-- 更多功能面板 -->
+      <div id="morePanel" class="hidden border-t border-slate-200 bg-white px-4 pb-4 pt-3">
+        <p class="mb-3 text-[11px] font-medium text-slate-400">更多功能</p>
+        <div class="grid grid-cols-3 gap-3">
+          <button type="button" data-more="上传图片" class="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 py-3 text-[11px] text-slate-600 transition hover:bg-slate-100">
+            <span class="text-xl">🖼️</span>上传图片
+          </button>
+          <button type="button" data-more="语音通话" class="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 py-3 text-[11px] text-slate-600 transition hover:bg-slate-100">
+            <span class="text-xl">📞</span>语音通话
+          </button>
+          <button type="button" data-more="视频通话" class="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 py-3 text-[11px] text-slate-600 transition hover:bg-slate-100">
+            <span class="text-xl">📹</span>视频通话
+          </button>
+        </div>
+      </div>
+
+      <!-- 输入栏 -->
+      <div class="flex items-center gap-2 border-t border-slate-200 bg-white px-3 py-2.5">
+        <button id="emojiBtn" type="button" aria-label="表情"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xl transition hover:bg-slate-100">😊</button>
+        <input id="chatInput" type="text" placeholder="发消息…" autocomplete="off"
+          class="min-w-0 flex-1 rounded-full bg-slate-100 px-3.5 py-2.5 text-sm text-slate-700 outline-none placeholder:text-slate-400" />
+        <button id="moreBtn" type="button" aria-label="更多功能"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+        </button>
+        <button id="sendBtn" type="button"
+          class="hidden shrink-0 rounded-full bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700">
+          发送
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 确认更改提示 ===== -->
+  <div id="confirmDialog" class="fixed inset-0 z-[80] hidden items-center justify-center px-8">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" data-confirm-cancel></div>
+    <div class="relative w-full max-w-[300px] rounded-2xl bg-white p-5 text-center shadow-2xl">
+      <p id="confirmTitle" class="text-base font-bold text-slate-800">确认更改</p>
+      <p id="confirmText" class="mt-2 text-xs leading-relaxed text-slate-500"></p>
+      <div class="mt-4 flex gap-2">
+        <button type="button" data-confirm-cancel
+          class="flex-1 rounded-xl bg-slate-100 py-2.5 text-xs font-medium text-slate-500 transition hover:bg-slate-200">取消</button>
+        <button id="confirmOk" type="button"
+          class="flex-1 rounded-xl bg-blue-600 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    /* ================= 基础数据 ================= */
+    // 校区由四个改为两个，且两校区地点不同
+    const CAMPUSES = [
+      { name: '东校区', desc: '主校区 · 大学城东路 1 号' },
+      { name: '西校区', desc: '分校区 · 文化路 88 号' }
+    ];
+
+    const CAMPUS_PLACES = {
+      '东校区': [
+        { name: '图书馆', tone: 'tone-blue' },
+        { name: '教学楼', tone: 'tone-violet' },
+        { name: '食堂',   tone: 'tone-amber' },
+        { name: '操场',   tone: 'tone-emerald' },
+        { name: '宿舍',   tone: 'tone-rose' },
+        { name: '其它',   tone: 'tone-other' }
+      ],
+      '西校区': [
+        { name: '实验楼',   tone: 'tone-cyan' },
+        { name: '体育馆',   tone: 'tone-orange' },
+        { name: '礼堂',     tone: 'tone-indigo' },
+        { name: '实训中心', tone: 'tone-teal' },
+        { name: '西区食堂', tone: 'tone-amber' },
+        { name: '宿舍',     tone: 'tone-rose' },
+        { name: '其它',     tone: 'tone-other' }
+      ]
+    };
+
+    const TIME_LABELS = {
+      all: '全部时间', today: '今天', '3d': '近 3 天',
+      '7d': '近一周', '30d': '近一月', custom: '自定义时间'
+    };
+
+    // 状态：searching = 未结束（寻找中 / 认领中）；done = 已结束（已找到 / 已归还）
+    const STATUS_OPTIONS = [
+      { value: 'searching', label: '仅显示寻找中', short: '仅寻找中' },
+      { value: 'all', label: '显示所有', short: '' },
+      { value: 'done', label: '仅显示已找到', short: '仅已找到' }
+    ];
+
+    const TABS = [
+      { value: 'all', label: '全部' },
+      { value: 'lost', label: '寻物' },
+      { value: 'found', label: '招领' },
+      { value: 'myLost', label: '我丢失的物品' },
+      { value: 'myFound', label: '我找到的失物' }
+    ];
+
+    /* ================= 工具 ================= */
+    const $ = (id) => document.getElementById(id);
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+    const dateStrFromDaysAgo = (days) => { const d = new Date(); d.setDate(d.getDate() - days); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+    const formatPhone = (p) => (p && p.length === 11) ? p.slice(0, 3) + ' ' + p.slice(3, 7) + ' ' + p.slice(7) : (p || '');
+    const placeTone = (campus, place) => {
+      const hit = (CAMPUS_PLACES[campus] || []).find((p) => p.name === place);
+      return hit ? hit.tone : 'tone-slate';
+    };
+    // 演示缩略图（真实上传走 canvas 压缩）
+    function mockImg(emoji, bg) {
+      const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>" +
+        "<rect width='160' height='160' fill='" + bg + "'/>" +
+        "<text x='80' y='106' font-size='78' text-anchor='middle'>" + emoji + "</text></svg>";
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+    // 一张图 = { thumb: 列表缩略图, large: 详情高清图 }
+    const mkImgs = (emoji, bg) => [{ thumb: mockImg(emoji, bg), large: mockImg(emoji, bg) }];
+    // 多图示例
+    const mkImgs2 = (e1, b1, e2, b2) => [
+      { thumb: mockImg(e1, b1), large: mockImg(e1, b1) },
+      { thumb: mockImg(e2, b2), large: mockImg(e2, b2) }
+    ];
+
+    /* ================= 测试账号（统一认证） ================= */
+    const TEST_ACCOUNT = {
+      nickname: '测试同学',
+      studentId: '20230012345',       // 学号
+      password: '123456',             // 教务系统密码（演示）
+      phone: '13800001234',
+      campus: '东校区', college: '计算机学院', grade: '2023级'
+    };
+    // 演示用户的校区 / 学院 / 年级（点击头像查看对方个人中心时展示）
+    const PROFILES = {
+      '林同学': { campus: '东校区', college: '外国语学院', grade: '2022级' },
+      '周同学': { campus: '东校区', college: '计算机学院', grade: '2023级' },
+      '陈同学': { campus: '东校区', college: '数学学院',   grade: '2021级' },
+      '许同学': { campus: '东校区', college: '体育学院',   grade: '2024级' },
+      '郑同学': { campus: '西校区', college: '化学化工学院', grade: '2023级' },
+      '吴同学': { campus: '西校区', college: '材料学院',   grade: '2022级' },
+      '何同学': { campus: '西校区', college: '体育学院',   grade: '2024级' },
+      '高同学': { campus: '西校区', college: '艺术学院',   grade: '2023级' },
+      '测试同学': { campus: '东校区', college: '计算机学院', grade: '2023级' }
+    };
+
+    /* ================= 状态 ================= */
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('lf_user') || 'null'); } catch (e) { user = null; }
+
+    let currentCampus = CAMPUSES[0].name;
+    let currentTime = 'all';
+    let currentPlace = 'all';
+    let currentStatus = 'all';
+    let currentTab = 'all';
+
+    /* ================= 物品数据 ================= */
+    const AVATAR_TONES = ['bg-sky-100', 'bg-violet-100', 'bg-emerald-100', 'bg-amber-100', 'bg-rose-100', 'bg-teal-100', 'bg-indigo-100'];
+
+    let items = [
+      { id: 'i1', title: '校园卡', imgs: mkImgs('💳', '#dbeafe'), desc: '卡套是浅蓝色的，背面贴有小熊贴纸',
+        campus: '东校区', place: '图书馆', placeInfo: '一楼大厅 · 自助借还机旁',
+        status: 'searching', type: 'lost', days: 0, timeText: '今天 10:24', user: '林同学', phone: '13800135588' },
+      { id: 'i2', title: '白色无线耳机', imgs: mkImgs('🎧', '#ede9fe'), desc: '装在白色充电盒里，可能落在教室',
+        campus: '东校区', place: '教学楼', placeInfo: 'A 区 204 · 第三排靠窗',
+        status: 'searching', type: 'lost', days: 0, timeText: '今天 09:16', user: '周同学', phone: '13922887711' },
+      { id: 'i3', title: '黑色折叠雨伞', imgs: [], desc: '伞柄上有一条银色装饰环',
+        campus: '东校区', place: '食堂', placeInfo: '正门伞架 · 伞柄有银环',
+        status: 'done', type: 'found', days: 1, timeText: '昨天 18:42', user: '陈同学', phone: '13755662200' },
+      { id: 'i4', title: '深蓝色笔记本', imgs: [], desc: '封面有“高等数学”字样',
+        campus: '东校区', place: '操场', placeInfo: '看台第二排 · 封面写有课程名',
+        status: 'searching', type: 'lost', days: 1, timeText: '昨天 16:08', user: '许同学', phone: '13599116622' },
+      { id: 'i5', title: '银色保温杯', imgs: [], desc: '杯身贴有蓝色校徽贴纸',
+        campus: '西校区', place: '实验楼', placeInfo: '三层走廊 · 靠近饮水机',
+        status: 'searching', type: 'lost', days: 0, timeText: '今天 11:05', user: '郑同学', phone: '13677883344' },
+      { id: 'i6', title: '宿舍钥匙一串', imgs: mkImgs('🔑', '#cffafe'), desc: '共三把钥匙，带蓝色挂绳',
+        campus: '西校区', place: '宿舍', placeInfo: '6 号楼门厅 · 蓝色挂绳',
+        status: 'done', type: 'found', days: 2, timeText: '前天 15:30', user: '吴同学', phone: '13044558899' },
+      { id: 'i7', title: '黑色双肩包', imgs: [], desc: '侧袋插着一只白色水杯',
+        campus: '西校区', place: '体育馆', placeInfo: '器材室门口 · 侧袋有水杯',
+        status: 'searching', type: 'lost', days: 3, timeText: '3 天前', user: '何同学', phone: '18822336677' },
+      { id: 'i8', title: '羽毛球拍', imgs: [], desc: '拍柄缠白色手胶',
+        campus: '西校区', place: '体育馆', placeInfo: '3 号场地 · 白色手胶',
+        status: 'done', type: 'found', days: 2, timeText: '前天 20:15', user: '高同学', phone: '15933441122' },
+
+      /* --- 测试账号 13800001234 已发布的内容 --- */
+      { id: 'me1', title: '黑色钱包', imgs: mkImgs('👛', '#e0e7ff'), desc: '内有校园卡和一张公交卡，钱包边缘有磨损',
+        campus: '东校区', place: '图书馆', placeInfo: '二楼自习区 · 靠窗座位',
+        status: 'searching', type: 'lost', days: 0, timeText: '今天 08:50',
+        user: '测试同学', phone: '13800001234', mine: true, avatar: 'bg-blue-100' },
+      { id: 'me2', title: '白色帆布包', imgs: mkImgs2('👝', '#fef3c7', '🏷️', '#e0f2fe'), desc: '包上挂着一只黄色小挂件，已交到教学楼值班室',
+        campus: '东校区', place: '教学楼', placeInfo: 'B 区 301 · 讲台旁',
+        status: 'searching', type: 'found', days: 1, timeText: '昨天 17:20',
+        user: '测试同学', phone: '13800001234', mine: true, avatar: 'bg-blue-100', peer: '周同学' },
+      { id: 'me3', title: '蓝色折叠伞', imgs: [], desc: '已经找回，感谢帮忙的同学',
+        campus: '东校区', place: '操场', placeInfo: '看台第三排',
+        status: 'done', type: 'lost', days: 2, timeText: '前天 09:10',
+        user: '测试同学', phone: '13800001234', mine: true, avatar: 'bg-blue-100' }
+    ];
+
+    // 测试账号「我找到的失物」下，对方询问物品信息的演示对话（含已读 / 未读）
+    const chats = {
+      me2: [
+        { from: 'other', text: '你好，这个白色帆布包是我丢的，昨天下午在 B 区 301 上课', time: '17:22', read: true },
+        { from: 'other', text: '包上挂着一只黄色小挂件对吧？里面有我的学生证和笔记', time: '17:23', read: true },
+        { from: 'me', text: '对，就是这只。我已经交到教学楼值班室了，你随时可以去取', time: '17:26', read: true },
+        { from: 'me', text: '值班室 20:00 关门，你今天方便去拿吗？', time: '17:27', read: false }
+      ]
+    };
+
+    /* ================= 后端 API（Go + Gin） ================= */
+    /* 后端没启动时全程降级为本地演示数据，页面不会白屏 */
+    const API_BASE = 'http://127.0.0.1:8080/api';
+    let apiOnline = false;            // 是否连上后端
+    let authToken = '';
+    try { authToken = localStorage.getItem('lf_token') || ''; } catch (e) {}
+
+    // 统一请求封装：JSON 进出 + 自动携带假 Token
+    async function api(path, options) {
+      const opt = options || {};
+      const headers = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = 'Bearer ' + authToken;
+      const res = await fetch(API_BASE + path, {
+        method: opt.method || 'GET',
+        headers: headers,
+        body: opt.body ? JSON.stringify(opt.body) : undefined
+      });
+      let data = null;
+      try { data = await res.json(); } catch (e) {}
+      if (!res.ok) throw new Error((data && data.error) || ('HTTP ' + res.status));
+      return data;
+    }
+
+    // 后端字段 → 前端字段
+    function toLocalItem(s) {
+      const date = s.date || (s.created_at ? s.created_at.slice(0, 10) : todayStr());
+      const days = Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse(date)) / 86400000));
+      return {
+        id: 's' + s.id,
+        serverId: s.id,
+        title: s.title,
+        desc: s.desc || '暂无更多描述',
+        type: s.type === 'found' ? 'found' : 'lost',
+        status: s.status === 'done' ? 'done' : 'searching',
+        user: s.owner || '匿名同学',
+        phone: s.phone || '',
+        campus: s.campus || currentCampus,
+        place: s.place || '其它',
+        placeInfo: s.place_info || '',
+        imgs: s.imgs || [],
+        date: date,
+        days: days,
+        timeText: timeTextFromDays(days, s.created_at || ''),
+        mine: !!user && (s.owner === user.nickname || s.owner === user.studentId),
+        avatar: AVATAR_TONES[(s.id || 0) % AVATAR_TONES.length]
+      };
+    }
+
+    function updateConnBadge() {
+      const badge = $('connBadge');
+      if (!badge) return;
+      badge.textContent = apiOnline ? '· 已连接后端' : '· 本地演示数据';
+      badge.className = 'ml-1 text-[11px] ' + (apiOnline ? 'text-blue-50' : 'text-blue-100/70');
+    }
+
+    // 拉取列表：以服务端为准；失败则保留本地演示数据
+    async function syncFromServer(silent) {
+      try {
+        const data = await api('/items');
+        items = (data.items || []).map(toLocalItem);
+        apiOnline = true;
+        updateConnBadge();
+        renderCards();
+        if (!silent) toast('已从后端加载 ' + items.length + ' 条数据');
+        return true;
+      } catch (e) {
+        apiOnline = false;
+        updateConnBadge();
+        if (!silent) toast('后端未连接：' + e.message);
+        return false;
+      }
+    }
+    // 补上自定义时间比较用的真实日期 + 头像底色
+    items.forEach((it, i) => { it.date = dateStrFromDaysAgo(it.days); it.avatar = AVATAR_TONES[i % AVATAR_TONES.length]; });
+
+    /* ================= 弹层工具 ================= */
+    function openSheet(id) {
+      const el = $(id);
+      el.classList.add('show');
+      requestAnimationFrame(() => el.classList.add('open'));
+    }
+    function closeSheet(id) {
+      const el = $(id);
+      el.classList.remove('open');
+      setTimeout(() => el.classList.remove('show'), 360);
+    }
+    document.querySelectorAll('.sheet').forEach((sheet) => {
+      sheet.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeSheet(sheet.id); });
+    });
+
+    function toast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 1900);
+    }
+
+    /* ================= 个人中心 ================= */
+    function renderAccountBtn() {
+      const btn = $('accountBtn');
+      if (user) {
+        btn.innerHTML = '♡<span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-amber-300 ring-2 ring-blue-600/40"></span>';
+        btn.classList.add('relative', 'w-11', 'text-xl');
+        btn.classList.remove('px-3');
+        btn.setAttribute('aria-label', '个人中心（已登录）');
+      } else {
+        btn.innerHTML = '<span class="text-xs font-medium">未登录</span>';
+        btn.classList.remove('relative', 'w-11', 'text-xl');
+        btn.classList.add('px-3');
+        btn.setAttribute('aria-label', '未登录，点击登录');
+      }
+    }
+
+    /* 他人资料：由 PROFILES + 其发布过的物品拼装 */
+    function profileOf(name) {
+      const seed = PROFILES[name] || {};
+      const own = items.filter((x) => x.user === name);
+      const ref = own[0] || {};
+      return {
+        name: name,
+        avatar: ref.avatar || 'bg-slate-100',
+        phone: ref.phone || '',
+        campus: seed.campus || ref.campus || '未填写',
+        college: seed.college || '未填写',
+        grade: seed.grade || '未填写',
+        lostCount: own.filter((x) => x.type === 'lost').length,
+        foundCount: own.filter((x) => x.type === 'found').length,
+        own: own.slice().sort((a, b) => a.days - b.days),   // TA 发布的物品（新的在前）
+        isSelf: false
+      };
+    }
+
+    function infoRow(label, value) {
+      return '<div class="flex items-center gap-2">' +
+        '<span class="w-12 shrink-0 text-xs text-slate-400">' + label + '</span>' +
+        '<span class="text-xs font-medium text-slate-600">' + esc(value) + '</span></div>';
+    }
+
+    /* 个人中心：抽屉内切换视图（main 主页 / messages 消息 / edit 编辑资料 / userLost·userFound 对方发布） */
+    let pcView = 'main';
+    let pcTarget = null;       // null = 自己，否则为对方昵称
+    let pcItemId = null;       // 打开这个资料页时所处的物品（用于“联系对方”定位同一个会话）
+    let peCampus = '';
+    let peGrade = '';
+
+    function openPersonalCenter(target, itemId) {
+      pcTarget = target || null;
+      pcItemId = itemId || null;
+      pcView = 'main';
+      renderPCBody();
+      openSheet('pcSheet');
+    }
+
+    function renderPCBody() {
+      const body = $('pcBody');
+      const target = pcTarget;
+      const isSelf = !target;
+      if (!user && (pcView === 'edit' || pcView === 'messages')) pcView = 'main';  // 掉登录态时回到主页
+      if (!pcTarget && (pcView === 'userLost' || pcView === 'userFound')) pcView = 'main';
+      $('pcTitle').textContent = pcView === 'messages' ? '消息'
+        : pcView === 'edit' ? '编辑资料'
+        : pcView === 'userLost' ? target + ' 的寻物'
+        : pcView === 'userFound' ? target + ' 的招领'
+        : (isSelf ? '个人中心' : target + ' 的个人中心');
+
+      // 对方的寻物 / 招领：内含 TA 发布的卡片，点卡片进详情
+      if (pcView === 'userLost' || pcView === 'userFound') {
+        const p = profileOf(target);
+        const isLost = pcView === 'userLost';
+        const cards = p.own.filter((x) => x.type === (isLost ? 'lost' : 'found'));
+        body.innerHTML = `
+          <div class="mb-3 flex items-center gap-2">
+            <button type="button" data-pc-back aria-label="返回"
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+            </button>
+            <p class="text-sm font-semibold text-slate-800">${esc(target)} 的${isLost ? '寻物' : '招领'}</p>
+            <span class="ml-auto text-[11px] text-slate-400">${cards.length} 条</span>
+          </div>
+          ${cards.length
+            ? '<div class="space-y-3">' + cards.map(cardHTML).join('') + '</div>'
+            : '<p class="py-10 text-center text-xs text-slate-400">TA 还没有发布' + (isLost ? '寻物' : '招领') + '信息</p>'}`;
+        return;
+      }
+
+      // 消息：直接显示在个人中心栏内（不再弹出另一个栏目）
+      if (pcView === 'messages') {
+        body.innerHTML = `
+          <div class="mb-3 flex items-center gap-2">
+            <button type="button" data-pc-back aria-label="返回"
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+            </button>
+            <p class="text-sm font-semibold text-slate-800">消息</p>
+          </div>
+          <div class="space-y-2">${msgListHTML()}</div>`;
+        return;
+      }
+
+      // 编辑资料
+      if (pcView === 'edit' && user) {
+        peCampus = user.campus || currentCampus;
+        peGrade = user.grade || '2023级';
+        body.innerHTML = `
+          <div class="mb-3 flex items-center gap-2">
+            <button type="button" data-pc-back aria-label="返回"
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg>
+            </button>
+            <p class="text-sm font-semibold text-slate-800">编辑资料</p>
+          </div>
+
+          <p class="f-label">昵称</p>
+          <input id="peNickname" class="f-input" maxlength="12" value="${esc(user.nickname || '')}" />
+
+          <p class="f-label mt-3">手机号</p>
+          <input id="pePhone" type="tel" maxlength="13" class="f-input" value="${esc(formatPhone(user.phone || ''))}" placeholder="11 位手机号，便于失主联系你" />
+
+          <p class="f-label mt-3">校区</p>
+          <div id="peCampusChips" class="flex flex-wrap gap-2"></div>
+
+          <p class="f-label mt-3">学院</p>
+          <input id="peCollege" class="f-input" maxlength="20" value="${esc(user.college || '')}" placeholder="如：计算机学院" />
+
+          <p class="f-label mt-3">年级</p>
+          <div id="peGradeChips" class="flex flex-wrap gap-2"></div>
+
+          <p class="f-label mt-3">学号<span class="ml-2 font-normal text-slate-400">（统一认证信息，不可修改）</span></p>
+          <input class="f-input bg-slate-50 text-slate-400" value="${esc(user.studentId || '')}" disabled />
+
+          <p id="peError" class="mt-3 hidden text-xs text-rose-500"></p>
+
+          <div class="mt-4 flex gap-2">
+            <button type="button" data-pc-back class="flex-1 rounded-xl bg-slate-100 py-3 text-xs font-medium text-slate-500 transition hover:bg-slate-200">取消</button>
+            <button id="peSaveBtn" type="button" class="flex-[1.6] rounded-xl bg-blue-600 py-3 text-xs font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700">保存</button>
+          </div>`;
+        renderPeChips();
+        return;
+      }
+
+      // 未登录且不是查看他人 → 统一身份认证登录
+      if (isSelf && !user) {
+        body.innerHTML = `
+          <div class="flex items-center gap-3 rounded-2xl bg-slate-50 p-4">
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-xl text-slate-400">?</div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-slate-700">未登录</p>
+              <p class="mt-1 text-xs text-slate-400">登录后可发布与管理你的失物信息</p>
+            </div>
+            <span class="ml-auto rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-400">游客</span>
+          </div>
+          <div class="mt-4">
+            <div class="mb-3 flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2.5">
+              <svg class="h-4 w-4 shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3 3 7.5 12 12l9-4.5L12 3Z"></path><path d="M6 10v5.5c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V10"></path>
+              </svg>
+              <p class="text-[11px] leading-snug text-blue-700">使用<b>学号</b>与<b>教务系统密码</b>进行统一身份认证</p>
+            </div>
+            <p class="f-label">学号</p>
+            <input id="loginStudentId" type="text" maxlength="20" class="f-input" placeholder="请输入学号" autocomplete="username" />
+            <p class="f-label mt-3">教务系统密码</p>
+            <input id="loginPassword" type="password" maxlength="32" class="f-input" placeholder="请输入教务系统密码" autocomplete="current-password" />
+            <p id="loginError" class="mt-2 hidden text-xs text-rose-500">学号或密码有误，请重新输入</p>
+            <button id="loginBtn" type="button"
+              class="mt-3 w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[.99]">
+              统一认证登录
+            </button>
+            <button id="testLoginBtn" type="button"
+              class="mt-2 w-full rounded-xl bg-blue-50 py-3 text-xs font-medium text-blue-600 transition hover:bg-blue-100">
+              一键使用测试账号（学号 ${TEST_ACCOUNT.studentId}）
+            </button>
+            <p class="mt-2 text-center text-[11px] text-slate-400">演示环境：输入任意 6-20 位学号 + 6 位以上密码即可通过认证</p>
+          </div>`;
+        $('loginBtn').addEventListener('click', () => doLogin());
+        $('testLoginBtn').addEventListener('click', () => doLogin(TEST_ACCOUNT));
+        ['loginStudentId', 'loginPassword'].forEach((id) =>
+          $(id).addEventListener('input', () => $('loginError').classList.add('hidden')));
+        return;
+      }
+
+      const msgCount = Object.keys(chats).length;
+      const p = isSelf
+        ? {
+            name: user.nickname, avatar: 'bg-blue-600', phone: user.phone,
+            campus: user.campus || currentCampus, college: user.college || '未填写', grade: user.grade || '未填写',
+            lostCount: items.filter((i) => i.mine && i.type === 'lost').length,
+            foundCount: items.filter((i) => i.mine && i.type === 'found').length,
+            isSelf: true
+          }
+        : profileOf(target);
+
+      const initial = p.isSelf ? '我' : (p.name || '同')[0];
+      const avatarCls = p.isSelf ? 'bg-blue-600 text-white' : p.avatar + ' text-slate-600';
+
+      body.innerHTML = `
+        <div class="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-blue-50 to-sky-50 p-4">
+          <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-semibold ${avatarCls}">${esc(initial)}</div>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-slate-800">${esc(p.name)}</p>
+            <p class="mt-1 flex items-center gap-1 text-xs text-slate-500">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1.1 1A16 16 0 0 1 4 5.1A1 1 0 0 1 5 4Z"></path></svg>
+              ${esc(formatPhone(p.phone) || '未填写')}
+            </p>
+          </div>
+          <span class="ml-auto shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-blue-600">${p.isSelf ? '已登录' : '对方'}</span>
+        </div>
+
+        ${p.isSelf ? '' : `
+        <button type="button" data-pc-contact
+          class="mt-3 flex w-full items-center gap-3 rounded-xl bg-blue-600 px-3.5 py-3 text-left text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[.99]">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H8l-4 3v-5.5A8 8 0 1 1 21 12Z"></path></svg>
+          </span>
+          <span class="text-sm font-semibold">联系对方</span>
+          <span class="ml-auto text-xs text-white/85">发消息 ›</span>
+        </button>`}
+
+        <div class="mt-3 space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
+          ${p.isSelf ? infoRow('学号', p.studentId || (user && user.studentId) || '未填写') : ''}
+          ${infoRow('校区', p.campus)}
+          ${infoRow('学院', p.college)}
+          ${infoRow('年级', p.grade)}
+        </div>
+
+        ${p.isSelf ? `
+        <button type="button" data-pc-edit
+          class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-50 py-2.5 text-xs font-medium text-blue-600 transition hover:bg-blue-100">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"></path>
+          </svg>
+          编辑资料
+        </button>` : ''}
+
+        <div class="mt-3 grid grid-cols-${p.isSelf ? '3' : '2'} gap-2 text-center">
+          ${p.isSelf ? `
+          <div class="rounded-xl bg-slate-50 py-3">
+            <p class="text-lg font-bold text-slate-800">${p.lostCount}</p>
+            <p class="mt-1 text-[11px] text-slate-400">我丢失的物品</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 py-3">
+            <p class="text-lg font-bold text-slate-800">${p.foundCount}</p>
+            <p class="mt-1 text-[11px] text-slate-400">我找到的失物</p>
+          </div>
+          <div class="rounded-xl bg-slate-50 py-3">
+            <p class="text-lg font-bold text-slate-800">${msgCount}</p>
+            <p class="mt-1 text-[11px] text-slate-400">消息</p>
+          </div>` : `
+          <button type="button" data-pc-user-items="lost" class="rounded-xl bg-slate-50 py-3 transition hover:bg-blue-50">
+            <p class="text-lg font-bold text-slate-800">${p.lostCount}</p>
+            <p class="mt-1 text-[11px] text-blue-500">TA 的寻物 ›</p>
+          </button>
+          <button type="button" data-pc-user-items="found" class="rounded-xl bg-slate-50 py-3 transition hover:bg-blue-50">
+            <p class="text-lg font-bold text-slate-800">${p.foundCount}</p>
+            <p class="mt-1 text-[11px] text-blue-500">TA 的招领 ›</p>
+          </button>`}
+        </div>
+
+        ${p.isSelf ? `
+        <div class="mt-3 space-y-2">
+          <button type="button" data-pc-go="myLost" class="flex w-full items-center gap-3 rounded-xl border border-slate-100 px-3.5 py-3 text-left transition hover:bg-slate-50">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-base">🧳</span>
+            <span class="text-sm text-slate-700">我丢失的物品</span>
+            <span class="ml-auto text-xs text-slate-400">${p.lostCount} 条 ›</span>
+          </button>
+          <button type="button" data-pc-go="myFound" class="flex w-full items-center gap-3 rounded-xl border border-slate-100 px-3.5 py-3 text-left transition hover:bg-slate-50">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-base">🎁</span>
+            <span class="text-sm text-slate-700">我找到的失物</span>
+            <span class="ml-auto text-xs text-slate-400">${p.foundCount} 条 ›</span>
+          </button>
+          <button type="button" data-pc-go="messages" class="flex w-full items-center gap-3 rounded-xl border border-slate-100 px-3.5 py-3 text-left transition hover:bg-slate-50">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-base">💬</span>
+            <span class="text-sm text-slate-700">消息</span>
+            <span class="ml-auto text-xs text-slate-400">${msgCount} 个会话 ›</span>
+          </button>
+        </div>
+
+        <button id="logoutBtn" type="button"
+          class="mt-4 w-full rounded-xl bg-slate-100 py-3 text-xs font-medium text-slate-500 transition hover:bg-slate-200">
+          退出登录
+        </button>` : ''}`;
+
+      if (p.isSelf) {
+        $('logoutBtn').addEventListener('click', () => {
+          user = null;
+          try { localStorage.removeItem('lf_user'); } catch (e) {}
+          renderAccountBtn(); renderPCBody(); renderTabs(); renderCards();
+          toast('已退出登录');
+        });
+        const editBtn = body.querySelector('[data-pc-edit]');
+        if (editBtn) editBtn.addEventListener('click', () => { pcView = 'edit'; renderPCBody(); });
+        body.querySelectorAll('[data-pc-back]').forEach((b) =>
+          b.addEventListener('click', () => { pcView = 'main'; renderPCBody(); }));
+        body.querySelectorAll('[data-pc-go]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const go = btn.dataset.pcGo;
+            if (go === 'messages') { pcView = 'messages'; renderPCBody(); return; }   // 就在个人中心栏内切换
+            closeSheet('pcSheet');
+            currentTab = go;
+            renderTabs(); renderCards();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        });
+      }
+    }
+
+    /* 个人中心：编辑资料 */
+    const GRADE_OPTIONS = ['2021级', '2022级', '2023级', '2024级', '2025级'];
+
+    function renderPeChips() {
+      $('peCampusChips').innerHTML = CAMPUSES.map((c) =>
+        `<button type="button" class="place-chip ${c.name === peCampus ? 'tone-blue active' : 'tone-slate'}" data-pe-campus="${c.name}">${c.name}</button>`).join('');
+      $('peGradeChips').innerHTML = GRADE_OPTIONS.map((g) =>
+        `<button type="button" class="place-chip ${g === peGrade ? 'tone-blue active' : 'tone-slate'}" data-pe-grade="${g}">${g}</button>`).join('');
+    }
+
+    // 个人中心里点「联系对方」→ 进入聊天界面（与详情页「联系对方」是同一个会话）
+    function contactFromProfile() {
+      const name = pcTarget;
+      if (!name) return;
+      const own = items.filter((x) => x.user === name).sort((a, b) => a.days - b.days);
+      const ctx = items.find((x) => x.id === pcItemId);
+      let target = null;
+      if (ctx && peerNameOf(ctx) === name) target = ctx;      // 从该会话 / 该物品详情进来的，直接续用
+      else if (own.length) target = own[0];                   // 否则用 TA 最新发布的那条
+      else if (ctx) target = ctx;
+      if (!target) { toast('暂时无法发起会话'); return; }
+      closeSheet('pcSheet');
+      setTimeout(() => openChat(target.id), 200);
+    }
+
+    // 编辑资料内的点击（返回 / 选校区 / 选年级 / 保存）
+    $('pcBody').addEventListener('click', (e) => {
+      const back = e.target.closest('[data-pc-back]');
+      if (back) { pcView = 'main'; renderPCBody(); return; }
+
+      if (e.target.closest('[data-pc-contact]')) { contactFromProfile(); return; }
+
+      const userItems = e.target.closest('[data-pc-user-items]');
+      if (userItems) {                                        // 跳转 TA 的寻物 / 招领
+        pcView = userItems.dataset.pcUserItems === 'lost' ? 'userLost' : 'userFound';
+        renderPCBody();
+        return;
+      }
+
+      const card = e.target.closest('[data-card-id]');
+      if (card) {                                             // TA 发布的卡片 → 关抽屉进详情
+        closeSheet('pcSheet');
+        setTimeout(() => openDetail(card.dataset.cardId), 200);
+        return;
+      }
+
+      const campus = e.target.closest('[data-pe-campus]');
+      if (campus) { peCampus = campus.dataset.peCampus; renderPeChips(); return; }
+
+      const grade = e.target.closest('[data-pe-grade]');
+      if (grade) { peGrade = grade.dataset.peGrade; renderPeChips(); return; }
+
+      const msgRow = e.target.closest('[data-msg-item]');
+      if (msgRow) {
+        closeSheet('pcSheet');
+        setTimeout(() => openChat(msgRow.dataset.msgItem), 200);
+        return;
+      }
+
+      if (e.target.closest('#peSaveBtn')) saveProfile();
+    });
+
+    function saveProfile() {
+      const err = $('peError');
+      const fail = (m) => { err.textContent = m; err.classList.remove('hidden'); };
+      err.classList.add('hidden');
+
+      const nickname = $('peNickname').value.trim();
+      const phone = $('pePhone').value.replace(/\D/g, '');
+      const college = $('peCollege').value.trim();
+      if (!nickname) return fail('请填写昵称');
+      if (phone && !/^1\d{10}$/.test(phone)) return fail('手机号格式不正确（11 位数字）');
+
+      // 先把「我发布的」物品的 serverId 记下来（改名后就判定不出来了）
+      const myServerIds = items.filter((it) => it.mine && it.serverId).map((it) => it.serverId);
+
+      user.nickname = nickname;
+      user.phone = phone;
+      user.campus = peCampus;
+      user.college = college || '未填写';
+      user.grade = peGrade;
+      try { localStorage.setItem('lf_user', JSON.stringify(user)); } catch (e) {}
+
+      // 同步到自己发布的物品上（作者名 / 联系方式）
+      items.forEach((it) => { if (it.mine) { it.user = nickname; it.phone = phone; } });
+
+      // 后端有记录的，一并把发布人改掉，避免刷新后“我发布的”丢失
+      if (apiOnline) {
+        myServerIds.forEach((sid) => {
+          api('/items/' + sid, { method: 'PUT', body: { owner: nickname, phone: phone } })
+            .catch(() => {});
+        });
+      }
+
+      pcView = 'main';
+      renderAccountBtn(); renderPCBody(); renderTabs(); renderCards();
+      toast('资料已更新');
+    }
+
+    // 统一身份认证（学号 + 教务系统密码）
+    async function doLogin(preset) {
+      const err = $('loginError');
+      const fail = (m) => { err.textContent = m; err.classList.remove('hidden'); };
+      err.classList.add('hidden');
+
+      const sid = (preset ? preset.studentId : $('loginStudentId').value).trim();
+      const pwd = (preset ? preset.password : $('loginPassword').value).trim();
+      if (!/^[0-9A-Za-z]{6,20}$/.test(sid)) return fail('请输入正确的学号（6-20 位数字或字母）');
+      if (pwd.length < 6) return fail('请输入教务系统密码（至少 6 位）');
+
+      const isTest = (sid === TEST_ACCOUNT.studentId && pwd === TEST_ACCOUNT.password) ||
+                     (preset && preset.studentId === TEST_ACCOUNT.studentId);
+      const nickname = isTest ? TEST_ACCOUNT.nickname : '同学 ' + sid.slice(-4);
+
+      // 先走后端认证；后端里没有该账号就自动注册一次（页面不出现注册入口）
+      let token = '';
+      try {
+        let r;
+        try {
+          r = await api('/login', { method: 'POST', body: { student_id: sid, password: pwd } });
+        } catch (e) {
+          await api('/register', { method: 'POST', body: { student_id: sid, password: pwd, nickname: nickname } });
+          r = await api('/login', { method: 'POST', body: { student_id: sid, password: pwd } });
+        }
+        token = r.token || '';
+        apiOnline = true;
+      } catch (e) {
+        apiOnline = false;   // 后端没启动 → 走本地演示登录
+      }
+      authToken = token;
+      try { localStorage.setItem('lf_token', token); } catch (e) {}
+      updateConnBadge();
+
+      user = isTest
+        ? Object.assign({}, TEST_ACCOUNT)
+        : { nickname: nickname, studentId: sid, phone: '',
+            campus: currentCampus, college: '未填写', grade: '未填写' };
+      try { localStorage.setItem('lf_user', JSON.stringify(user)); } catch (e) {}
+
+      renderAccountBtn(); renderPCBody(); renderTabs(); renderCards();
+      await syncFromServer(true);   // 用新身份重新拉一次列表（判定“我发布的”）
+      toast(token ? '统一认证成功' : '本地演示登录成功（后端未连接）');
+    }
+
+    $('accountBtn').addEventListener('click', () => openPersonalCenter());
+    function openUserProfile(name, itemId) {     // 打开对方个人中心（带上来源物品，方便定位会话）
+      openPersonalCenter(name, itemId);
+    }
+
+    /* ================= 校区切换 ================= */
+    function renderCampusList() {
+      $('campusList').innerHTML = CAMPUSES.map((c) => {
+        const active = c.name === currentCampus;
+        return `
+          <button type="button" data-campus="${c.name}"
+            class="flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition
+                   ${active ? 'border-blue-200 bg-blue-50/70' : 'border-slate-100 bg-white hover:bg-slate-50'}">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg
+                         ${active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}">🏫</span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold ${active ? 'text-blue-700' : 'text-slate-700'}">${c.name}</span>
+              <span class="mt-0.5 block truncate text-[11px] text-slate-400">${c.desc} · ${(CAMPUS_PLACES[c.name] || []).length} 个地点</span>
+            </span>
+            ${active
+              ? '<svg class="h-4 w-4 shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"></path></svg>'
+              : '<svg class="h-4 w-4 shrink-0 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>'}
+          </button>`;
+      }).join('');
+    }
+
+    function applyCampus(name) {
+      currentCampus = name;
+      currentPlace = 'all';
+      $('campusBtnText').textContent = name;
+      $('placeScopeHint').textContent = name;
+      renderPlaceChips(); renderCampusList(); renderCards();
+    }
+
+    $('campusBtn').addEventListener('click', () => { renderCampusList(); openSheet('campusSheet'); });
+    $('campusList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-campus]');
+      if (!btn) return;
+      applyCampus(btn.dataset.campus);
+      closeSheet('campusSheet');
+    });
+
+    /* ================= 搜索栏展开 ================= */
+    const panel = $('filterPanel');
+    const toggle = $('filterToggle');
+    const customRange = $('customRange');
+
+    function setPanel(open) {
+      panel.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      $('filterChevron').classList.toggle('rotate-180', open);
+      $('filterToggleText').textContent = open ? '收起' : '筛选';
+      if (!open) { customRange.classList.add('hidden'); customRange.classList.remove('flex'); }
+    }
+    toggle.addEventListener('click', () => setPanel(!panel.classList.contains('open')));
+    $('searchInput').addEventListener('focus', () => setPanel(true));
+    // 完整搜索框与简化搜索框内容双向同步
+    $('searchInput').addEventListener('input', (e) => { $('miniSearchInput').value = e.target.value; renderCards(); });
+    $('miniSearchInput').addEventListener('input', (e) => { $('searchInput').value = e.target.value; renderCards(); });
+    $('applyFilter').addEventListener('click', () => { renderCards(); setPanel(false); });
+    $('cancelFilter').addEventListener('click', () => setPanel(false));
+
+    /* ================= 时间 / 地点筛选 ================= */
+    $('timeChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      document.querySelectorAll('#timeChips .chip').forEach((el) => el.classList.remove('chip-active'));
+      chip.classList.add('chip-active');
+      currentTime = chip.dataset.time;
+      if (currentTime === 'custom') { customRange.classList.remove('hidden'); customRange.classList.add('flex'); }
+      else { customRange.classList.add('hidden'); customRange.classList.remove('flex'); }
+      renderCards();
+    });
+    ['dateStart', 'dateEnd'].forEach((id) => $(id).addEventListener('change', renderCards));
+
+    function renderPlaceChips() {
+      const list = CAMPUS_PLACES[currentCampus] || [];
+      $('placeChips').innerHTML =
+        `<button type="button" class="place-chip tone-slate ${currentPlace === 'all' ? 'active' : ''}" data-place="all">全部地点</button>` +
+        list.map((p) => `<button type="button" class="place-chip ${p.tone} ${currentPlace === p.name ? 'active' : ''}" data-place="${p.name}">${p.name}</button>`).join('');
+      $('placeScopeHint').textContent = currentCampus;
+    }
+    $('placeChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-place]');
+      if (!chip) return;
+      currentPlace = chip.dataset.place;
+      renderPlaceChips(); renderCards();
+    });
+
+    /* ================= 显示选择（寻找中 / 所有 / 已找到） ================= */
+    function renderStatusMenu() {
+      $('statusMenu').innerHTML = STATUS_OPTIONS.map((o) => {
+        const active = o.value === currentStatus;
+        return `<button type="button" role="menuitem" data-status-option="${o.value}" class="menu-item ${active ? 'active' : ''}">
+          ${o.label}
+          ${active ? '<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"></path></svg>' : ''}
+        </button>`;
+      }).join('');
+      $('statusFilterText').textContent = STATUS_OPTIONS.find((o) => o.value === currentStatus).label;
+      const btn = $('statusFilterBtn');
+      const on = currentStatus !== 'all';
+      btn.classList.toggle('border-blue-200', on); btn.classList.toggle('bg-blue-50', on); btn.classList.toggle('text-blue-600', on);
+      btn.classList.toggle('border-slate-200', !on); btn.classList.toggle('bg-white', !on); btn.classList.toggle('text-slate-500', !on);
+    }
+    function toggleStatusMenu(open) {
+      $('statusMenu').classList.toggle('open', open);
+      $('statusFilterBtn').setAttribute('aria-expanded', String(open));
+      $('statusChevron').classList.toggle('rotate-180', open);
+    }
+    $('statusFilterBtn').addEventListener('click', (e) => { e.stopPropagation(); toggleStatusMenu(!$('statusMenu').classList.contains('open')); });
+    $('statusMenu').addEventListener('click', (e) => {
+      const item = e.target.closest('[data-status-option]');
+      if (!item) return;
+      currentStatus = item.dataset.statusOption;
+      renderStatusMenu(); toggleStatusMenu(false); renderCards();
+    });
+    document.addEventListener('click', (e) => { if (!$('statusFilterWrap').contains(e.target)) toggleStatusMenu(false); });
+
+    /* ================= 分类标签 ================= */
+    function renderTabs() {
+      $('tabBar').innerHTML = TABS.map((t) => {
+        const active = t.value === currentTab;
+        return `<button type="button" data-tab="${t.value}"
+          class="tab-btn relative shrink-0 py-4 text-sm ${active ? 'font-semibold text-blue-600' : 'text-slate-500'}">
+          ${t.label}
+          <span class="tab-underline absolute bottom-0 left-0 h-0.5 w-full rounded-full bg-blue-600 ${active ? '' : 'hidden'}"></span>
+        </button>`;
+      }).join('');
+    }
+    $('tabBar').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tab]');
+      if (!btn) return;
+      currentTab = btn.dataset.tab;
+      renderTabs(); renderCards();
+    });
+
+    /* ================= 卡片渲染 ================= */
+    const firstThumb = (it) => (it.imgs && it.imgs.length ? it.imgs[0].thumb : null);
+
+    function thumbHTML(it) {
+      const thumb = firstThumb(it);
+      if (thumb) {
+        return `<img src="${thumb}" alt="${it.title}" class="h-14 w-14 shrink-0 rounded-xl object-cover ring-1 ring-slate-100" />`;
+      }
+      return `<div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-200/70 ring-1 ring-slate-200">
+                <span class="text-[10px] font-medium leading-none text-slate-400">无图片</span>
+              </div>`;
+    }
+
+    function cardHTML(it) {
+      const tone = placeTone(it.campus, it.place);
+      const statusBadge = statusBadgeHTML(it);
+      const typeBadge = it.type === 'lost'
+        ? '<span class="shrink-0 rounded-lg bg-blue-50 px-2 py-1 text-[11px] text-blue-600">寻物</span>'
+        : '<span class="shrink-0 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] text-emerald-600">招领</span>';
+      const placePill = it.placeInfo ? `<span class="place-chip tone-slate">${it.placeInfo}</span>` : '';
+
+      return `
+        <article data-card-id="${it.id}" class="cursor-pointer rounded-2xl border p-4 shadow-sm transition ${
+          it.mine ? 'border-sky-300 bg-sky-100 hover:bg-sky-200'
+                  : 'border-slate-100 bg-white hover:border-blue-100 hover:shadow-md'}">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 items-start gap-3">
+              ${thumbHTML(it)}
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="font-semibold text-slate-800">${it.title}</h3>
+                  ${statusBadge}
+                  ${it.mine ? '<span class="rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-medium text-white">我发布的</span>' : ''}
+                </div>
+                <p class="mt-1 text-xs text-slate-400">${it.desc}</p>
+              </div>
+            </div>
+            ${typeBadge}
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-50 pt-3">
+            <button type="button" data-place-jump="${it.place}" data-campus-jump="${it.campus}" class="place-chip ${tone}">📍 ${it.place}</button>
+            ${placePill}
+            <span class="ml-auto text-xs text-slate-400">${it.timeText}</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full ${it.avatar} text-[11px]">${(it.user || '同')[0]}</span>
+            <span>${it.user}</span>
+            <span class="place-chip tone-slate static-chip" style="padding:.25rem .6rem;font-size:11px">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1.1 1A16 16 0 0 1 4 5.1A1 1 0 0 1 5 4Z"></path></svg>
+              ${formatPhone(it.phone)}
+            </span>
+          </div>
+        </article>`;
+    }
+
+    /* ================= 筛选主逻辑 ================= */
+    function matchTime(it) {
+      switch (currentTime) {
+        case 'today': return it.days === 0;
+        case '3d': return it.days <= 2;
+        case '7d': return it.days <= 6;
+        case '30d': return it.days <= 29;
+        case 'custom': {
+          const s = $('dateStart').value, e = $('dateEnd').value;
+          if (!s && !e) return true;
+          if (s && it.date < s) return false;
+          if (e && it.date > e) return false;
+          return true;
+        }
+        default: return true;
+      }
+    }
+
+    function visibleItems() {
+      const isMineTab = currentTab === 'myLost' || currentTab === 'myFound';
+      const keyword = $('searchInput').value.trim();
+
+      return items.filter((it) => {
+        if (currentTab === 'lost' && it.type !== 'lost') return false;
+        if (currentTab === 'found' && it.type !== 'found') return false;
+        if (currentTab === 'myLost' && !(it.mine && it.type === 'lost')) return false;
+        if (currentTab === 'myFound' && !(it.mine && it.type === 'found')) return false;
+
+        if (isMineTab) {
+          if (!user) return false;                 // 未登录时“我的”栏目为空
+        } else {
+          if (it.campus !== currentCampus) return false;
+          if (currentPlace !== 'all' && it.place !== currentPlace) return false;
+        }
+        if (currentStatus !== 'all' && it.status !== currentStatus) return false;
+        if (!matchTime(it)) return false;
+        if (keyword && !(it.title + it.desc + it.place + (it.placeInfo || '')).includes(keyword)) return false;
+        return true;
+      });
+    }
+
+    function renderCards() {
+      // 排序：自己的、且尚未结束的卡片置顶（标记为已找到 / 已归还后不再置顶）
+      const list = visibleItems().sort((a, b) =>
+        ((b.mine && b.status !== 'done') ? 1 : 0) - ((a.mine && a.status !== 'done') ? 1 : 0) || a.days - b.days);
+      $('cardList').innerHTML = list.map(cardHTML).join('');
+
+      const isMineTab = currentTab === 'myLost' || currentTab === 'myFound';
+      const empty = $('emptyState');
+      if (list.length === 0) {
+        empty.classList.remove('hidden');
+        if (isMineTab && !user) {
+          empty.innerHTML = `
+            <p class="text-3xl">🔐</p>
+            <p class="mt-3 text-sm font-medium text-slate-600">登录后查看我的发布</p>
+            <p class="mt-1 text-xs text-slate-400">未登录状态下无法查看「我丢失的物品 / 我找到的失物」</p>
+            <button type="button" data-empty="login" class="mt-4 rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700">立即登录</button>`;
+        } else if (isMineTab) {
+          empty.innerHTML = `
+            <p class="text-3xl">📦</p>
+            <p class="mt-3 text-sm font-medium text-slate-600">还没有${currentTab === 'myLost' ? '丢失物品' : '找到的失物'}记录</p>
+            <p class="mt-1 text-xs text-slate-400">点击右下角「+」发布一条吧</p>
+            <button type="button" data-empty="publish" class="mt-4 rounded-full bg-blue-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-blue-700">去发布</button>`;
+        } else {
+          empty.innerHTML = `
+            <p class="text-3xl">🔍</p>
+            <p class="mt-3 text-sm font-medium text-slate-600">没有符合条件的动态</p>
+            <p class="mt-1 text-xs text-slate-400">试试切换校区、地点或显示范围</p>
+            <button type="button" data-empty="reset" class="mt-4 rounded-full bg-blue-50 px-4 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-100">重置筛选</button>`;
+        }
+      } else {
+        empty.classList.add('hidden');
+      }
+
+      $('countHint').textContent = list.length;
+      updateHint();
+    }
+
+    // 搜索栏下方的那句话：随当前筛选（关键词 / 栏目 / 状态 / 地点）变化
+    function headerHintText() {
+      const isMineTab = currentTab === 'myLost' || currentTab === 'myFound';
+      const keyword = $('searchInput').value.trim();
+      if (keyword) return '包含「' + keyword + '」的线索都在这里';
+      if (currentTab === 'myLost') return '你丢的东西，进展都记在这里';
+      if (currentTab === 'myFound') return '谢谢你，帮它回到主人身边';
+      if (currentStatus === 'done') return '这些都已经物归原主啦';
+      if (currentStatus === 'searching') return '还在等线索，也许你能帮上忙';
+      if (currentPlace !== 'all') return '「' + currentPlace + '」附近的最新线索';
+      if (currentTab === 'lost') return '这些同学正在等一条线索';
+      if (currentTab === 'found') return '看看有没有你丢掉的东西';
+      return '今天也许就能找到它';
+    }
+
+    function updateHint() {
+      const isMineTab = currentTab === 'myLost' || currentTab === 'myFound';
+      let time = TIME_LABELS[currentTime] || '全部时间';
+      if (currentTime === 'custom') {
+        const s = $('dateStart').value, e = $('dateEnd').value;
+        if (s || e) time = (s || '不限') + ' ~ ' + (e || '不限');
+      }
+      const parts = [isMineTab ? '全部校区' : currentCampus];
+      if (!isMineTab && currentPlace !== 'all') parts.push(currentPlace);
+      parts.push(time);
+      const st = STATUS_OPTIONS.find((o) => o.value === currentStatus);
+      if (st && st.short) parts.push(st.short);
+      if (currentTab === 'lost') parts.push('寻物');
+      if (currentTab === 'found') parts.push('招领');
+      if (currentTab === 'myLost') parts.push('我丢失的物品');
+      if (currentTab === 'myFound') parts.push('我找到的失物');
+      $('resultHint').textContent = parts.join(' · ');
+      $('hintText').textContent = headerHintText();
+    }
+
+    // 卡片点击：地点标签 → 按地点筛选；其它区域 → 进入物品详情
+    $('cardList').addEventListener('click', (e) => {
+      const tag = e.target.closest('[data-place-jump]');
+      if (tag) {
+        if (currentCampus !== tag.dataset.campusJump) applyCampus(tag.dataset.campusJump);
+        currentPlace = tag.dataset.placeJump;
+        renderPlaceChips(); renderCards();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (e.target.closest('a')) return;                       // 手机号拨号链接
+      const card = e.target.closest('[data-card-id]');
+      if (card) openDetail(card.dataset.cardId);
+    });
+
+    $('emptyState').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-empty]');
+      if (!btn) return;
+      if (btn.dataset.empty === 'login') { openPersonalCenter(); }
+      if (btn.dataset.empty === 'publish') openPublish();
+      if (btn.dataset.empty === 'reset') resetAll();
+    });
+
+    /* ================= 发布 ================= */
+    let pubType = 'lost';
+    let pubCampus = currentCampus;
+    let pubPlace = '';
+    let pubImgs = [];             // 发布时已上传的图片 [{ thumb, large }]
+
+    function renderPubCampusChips() {
+      $('pubCampusChips').innerHTML = CAMPUSES.map((c) =>
+        `<button type="button" class="place-chip ${c.name === pubCampus ? 'tone-blue active' : 'tone-slate'}" data-pub-campus="${c.name}">${c.name}</button>`
+      ).join('');
+    }
+    function renderPubPlaceChips() {
+      const list = CAMPUS_PLACES[pubCampus] || [];
+      $('pubPlaceChips').innerHTML = list.map((p) =>
+        `<button type="button" class="place-chip ${pubPlace === p.name ? p.tone + ' active' : 'tone-slate'}" data-pub-place="${p.name}">${p.name}</button>`
+      ).join('');
+    }
+    function renderPubImageList() {
+      renderImageEditor('pubImageList', pubImgs, 'pubImage', 'data-pub-img-remove');
+    }
+
+    function syncDateQuick() {
+      const days = Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse($('pubDate').value || todayStr())) / 86400000));
+      document.querySelectorAll('#pubDateQuick .chip').forEach((c) => c.classList.toggle('chip-active', Number(c.dataset.day) === days));
+    }
+
+    function resetPublishForm() {
+      pubType = 'lost';
+      pubCampus = currentCampus;
+      pubPlace = '';
+      pubImgs = [];
+      $('pubTitle').value = '';
+      $('pubDesc').value = '';
+      $('pubPlaceInfo').value = '';
+      $('pubDate').value = todayStr();
+      $('pubPhone').value = user ? user.phone : '';
+      $('pubError').classList.add('hidden');
+      renderPubImageList();
+      document.querySelectorAll('[data-pub-type]').forEach((b) => b.classList.toggle('active', b.dataset.pubType === 'lost'));
+      renderPubCampusChips();
+      renderPubPlaceChips();
+      syncDateQuick();
+    }
+
+    function openPublish() {
+      resetPublishForm();
+      openSheet('pubSheet');
+    }
+
+    $('fabBtn').addEventListener('click', () => {
+      if (!user) {
+        toast('请先登录后再发布');
+        openPersonalCenter();
+        return;
+      }
+      openPublish();
+    });
+
+    $('pubSheet').addEventListener('click', (e) => {
+      const typeBtn = e.target.closest('[data-pub-type]');
+      if (typeBtn) {
+        pubType = typeBtn.dataset.pubType;
+        document.querySelectorAll('[data-pub-type]').forEach((b) => b.classList.toggle('active', b === typeBtn));
+        return;
+      }
+      const campusBtn = e.target.closest('[data-pub-campus]');
+      if (campusBtn) {
+        pubCampus = campusBtn.dataset.pubCampus;
+        pubPlace = '';
+        renderPubCampusChips();
+        renderPubPlaceChips();
+        return;
+      }
+      const placeBtn = e.target.closest('[data-pub-place]');
+      if (placeBtn) {
+        pubPlace = placeBtn.dataset.pubPlace;
+        renderPubPlaceChips();
+        return;
+      }
+      const dayBtn = e.target.closest('[data-day]');
+      if (dayBtn) {
+        $('pubDate').value = dateStrFromDaysAgo(Number(dayBtn.dataset.day));
+        syncDateQuick();
+      }
+    });
+    $('pubDate').addEventListener('change', syncDateQuick);
+
+    // 图片：读取 → canvas 等比缩小 + 压缩 → dataURL（卡片缩略图 + 详情页高清图）
+    function compressTo(img, max, quality) {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      return { url: canvas.toDataURL('image/jpeg', quality), w: w, h: h };
+    }
+
+    $('pubImage').addEventListener('change', (e) => {
+      if (!e.target.files || !e.target.files.length) return;
+      addImagesFromFiles(e.target.files, pubImgs, renderPubImageList);
+      e.target.value = '';
+    });
+    $('pubImageList').addEventListener('click', (e) => {
+      const del = e.target.closest('[data-pub-img-remove]');
+      if (!del) return;
+      pubImgs.splice(Number(del.dataset.pubImgRemove), 1);
+      renderPubImageList();
+    });
+
+    function showPubError(msg) {
+      const el = $('pubError');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    $('pubSubmit').addEventListener('click', async () => {
+      $('pubError').classList.add('hidden');
+      const title = $('pubTitle').value.trim();
+      const phone = $('pubPhone').value.replace(/\D/g, '');
+      if (!title) return showPubError('请填写物品名称');
+      if (!pubPlace) return showPubError('请选择地点标签');
+      if (!/^1\d{10}$/.test(phone)) return showPubError('请填写正确的 11 位手机号');
+
+      const date = $('pubDate').value || todayStr();
+      const days = Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse(date)) / 86400000));
+      const now = new Date();
+      const timeText = days === 0
+        ? '今天 ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes())
+        : (days === 1 ? '昨天' : days + ' 天前');
+      const desc = $('pubDesc').value.trim() || '暂无更多描述';
+      const placeInfo = $('pubPlaceInfo').value.trim();
+
+      if (apiOnline) {
+        // 有后端 → 发到后端，然后重新拉取（以服务端为准）
+        try {
+          await api('/items', { method: 'POST', body: {
+            title: title, desc: desc, type: pubType, status: 'searching',
+            owner: user ? user.nickname : '匿名同学',
+            campus: pubCampus, place: pubPlace, place_info: placeInfo,
+            phone: phone, date: date, imgs: pubImgs.slice()
+          }});
+          await syncFromServer(true);
+        } catch (e) {
+          return showPubError('发布到后端失败：' + e.message);
+        }
+      } else {
+        items.unshift({
+          id: 'u' + Date.now(),
+          title: title,
+          imgs: pubImgs.slice(),
+          desc: desc,
+          campus: pubCampus,
+          place: pubPlace,
+          placeInfo: placeInfo,
+          status: 'searching',                     // 新发布默认未结束（寻找中 / 认领中）
+          type: pubType,
+          days: days,
+          date: date,
+          timeText: timeText,
+          user: user ? user.nickname : '我',
+          phone: phone,
+          mine: true,
+          avatar: 'bg-blue-100'
+        });
+      }
+
+      currentTab = pubType === 'lost' ? 'myLost' : 'myFound';
+      renderTabs(); renderCards();
+      closeSheet('pubSheet');
+      setPanel(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast(pubType === 'lost' ? '已发布到「我丢失的物品」' : '已发布到「我找到的失物」');
+    });
+
+    /* ================= 重置 ================= */
+    function resetAll() {
+      currentTime = 'all';
+      currentPlace = 'all';
+      currentStatus = 'all';
+      $('searchInput').value = '';
+      document.querySelectorAll('#timeChips .chip').forEach((el) => el.classList.toggle('chip-active', el.dataset.time === 'all'));
+      $('dateStart').value = '';
+      $('dateEnd').value = '';
+      customRange.classList.add('hidden');
+      customRange.classList.remove('flex');
+      renderPlaceChips(); renderStatusMenu(); renderCards();
+    }
+    $('resetFilter').addEventListener('click', resetAll);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!$('confirmDialog').classList.contains('hidden')) { hideConfirm(); return; }
+      if ($('chatView').classList.contains('show')) { closeView('chatView'); return; }
+      if ($('detailView').classList.contains('show')) { closeView('detailView'); return; }
+      ['campusSheet', 'pcSheet', 'pubSheet'].forEach(closeSheet);
+      setPanel(false); toggleStatusMenu(false);
+    });
+
+    /* ================= 全屏视图：物品详情 ================= */
+    let currentDetailId = null;
+    let detailMode = 'view';   // view = 查看；edit = 编辑
+    let edPlace = '';          // 编辑态临时选中的地点标签
+    let edImgs = [];           // 编辑态临时图片数组 [{ thumb, large }]
+    let detailStatusPick = 'searching';   // 详情页「修改物品状态」的临时选择
+
+    function syncBodyScroll() {
+      const anyOpen = ['detailView', 'chatView'].some((v) => $(v).classList.contains('show'));
+      document.body.style.overflow = anyOpen ? 'hidden' : '';
+    }
+    function openView(id) {
+      const el = $(id);
+      el.classList.add('show');
+      requestAnimationFrame(() => el.classList.add('open'));
+      syncBodyScroll();
+    }
+    function closeView(id) {
+      $(id).classList.remove('open');
+      setTimeout(() => { $(id).classList.remove('show'); syncBodyScroll(); }, 320);
+    }
+    document.querySelectorAll('[data-view-close]').forEach((btn) => {
+      btn.addEventListener('click', () => closeView(btn.dataset.viewClose));
+    });
+
+    /* 状态文案：我丢失的物品 寻找中 ⇄ 已找到；我找到的失物 认领中 ⇄ 已归还 */
+    function statusLabel(it) {
+      if (it.status === 'done') return it.type === 'lost' ? '已找到' : '已归还';
+      return it.type === 'lost' ? '寻找中' : '认领中';
+    }
+    function statusClass(it) {
+      if (it.status === 'done') return 'bg-emerald-50 text-emerald-600';
+      return it.type === 'lost' ? 'bg-orange-50 text-orange-500' : 'bg-sky-50 text-sky-600';
+    }
+    // 列表 / 详情里只做展示；状态统一在详情页「修改物品状态」栏里改
+    function statusBadgeHTML(it) {
+      return '<span class="rounded-full px-2 py-0.5 text-[11px] font-medium ' + statusClass(it) + '">' + statusLabel(it) + '</span>';
+    }
+
+    // 状态变更：本地立即生效，同时同步给后端
+    function setItemStatus(id, status) {
+      const it = items.find((x) => x.id === id);
+      if (!it) return;
+      it.status = status;
+      detailStatusPick = status;
+      renderCards();
+      if (currentDetailId === id) renderDetail();
+      if (apiOnline && it.serverId) {
+        api('/items/' + it.serverId, { method: 'PUT', body: { status: status } })
+          .catch((e) => toast('同步后端失败：' + e.message));
+      }
+      toast(status === 'done'
+        ? (it.type === 'lost' ? '已标记为「已找到」' : '已标记为「已归还」')
+        : (it.type === 'lost' ? '已改回「寻找中」' : '已改回「认领中」'));
+    }
+
+    function applyStatusChange() {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it || !it.mine) return;
+      if (detailStatusPick === it.status) { toast('状态没有变化'); return; }
+      if (detailStatusPick === 'done') {
+        showConfirm('确认更改',
+          '确定将「' + it.title + '」标记为「' + (it.type === 'lost' ? '已找到' : '已归还') + '」吗？确认后该动态不再置顶。',
+          () => setItemStatus(it.id, 'done'));
+      } else {
+        setItemStatus(it.id, 'searching');   // 改回未结束状态无需确认
+      }
+    }
+
+    // 删除自己发布的动态（对应后端 DELETE /api/items/:id）
+    function confirmDeleteItem() {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it) return;
+      showConfirm('确认删除', '确定删除「' + it.title + '」吗？删除后不可恢复。', async () => {
+        if (apiOnline && it.serverId) {
+          try {
+            await api('/items/' + it.serverId, { method: 'DELETE' });
+          } catch (e) {
+            toast('删除失败：' + e.message);
+            return;
+          }
+          await syncFromServer(true);
+        } else {
+          items = items.filter((x) => x.id !== it.id);
+          renderCards();
+        }
+        closeView('detailView');
+        toast('已删除');
+      });
+    }
+
+    /* ================= 确认更改提示 ================= */
+    let pendingConfirm = null;
+    function showConfirm(title, text, onOk) {
+      $('confirmTitle').textContent = title;
+      $('confirmText').textContent = text;
+      pendingConfirm = onOk;
+      $('confirmDialog').classList.remove('hidden');
+      $('confirmDialog').classList.add('flex');
+    }
+    function hideConfirm() {
+      $('confirmDialog').classList.add('hidden');
+      $('confirmDialog').classList.remove('flex');
+      pendingConfirm = null;
+    }
+    $('confirmDialog').addEventListener('click', (e) => {
+      if (e.target.closest('[data-confirm-cancel]')) { hideConfirm(); return; }
+      if (e.target.closest('#confirmOk')) {
+        const fn = pendingConfirm;
+        hideConfirm();
+        if (fn) fn();
+      }
+    });
+
+    function timeTextFromDays(days, oldText) {
+      if (days === 0) {
+        const m = /(\d{2}:\d{2})/.exec(oldText || '');
+        return '今天 ' + (m ? m[1] : nowHM());
+      }
+      if (days === 1) return '昨天';
+      return days + ' 天前';
+    }
+
+    /* 详情页图片画廊：多图横向滑动 + 圆点指示 */
+    function renderDetailGallery(it) {
+      const gallery = $('detailGallery');
+      const noImg = $('detailNoImg');
+      const imgs = (it && it.imgs) || [];
+
+      if (imgs.length) {
+        gallery.classList.remove('hidden');
+        noImg.classList.add('hidden');
+        noImg.classList.remove('flex');
+        gallery.innerHTML = imgs.map((im, i) =>
+          '<img src="' + (im.large || im.thumb) + '" alt="物品图片 ' + (i + 1) +
+          '" class="max-h-[420px] w-full shrink-0 snap-center bg-slate-100 object-contain" />').join('');
+        $('detailDots').innerHTML = imgs.length > 1
+          ? imgs.map((_, i) => '<span data-dot="' + i + '" class="h-1.5 w-1.5 rounded-full bg-white/60 shadow"></span>').join('')
+          : '';
+        gallery.scrollLeft = 0;
+        updateDetailDots();
+      } else {
+        gallery.classList.add('hidden');
+        gallery.innerHTML = '';
+        $('detailDots').innerHTML = '';
+        noImg.classList.remove('hidden');
+        noImg.classList.add('flex');
+      }
+      // 只有一张（或没有）图时不显示左右切换键
+      const many = imgs.length > 1;
+      $('galPrev').classList.toggle('hidden', !many);
+      $('galNext').classList.toggle('hidden', !many);
+      $('detailGalleryWrap').classList.remove('show-nav');
+    }
+
+    // 左右切换：按一屏宽度平滑滚动
+    function galScrollBy(dir) {
+      const g = $('detailGallery');
+      g.scrollBy({ left: dir * g.clientWidth, behavior: 'smooth' });
+    }
+    $('galPrev').addEventListener('click', (e) => { e.stopPropagation(); galScrollBy(-1); });
+    $('galNext').addEventListener('click', (e) => { e.stopPropagation(); galScrollBy(1); });
+
+    // 触屏/点击：点图片附近先唤出切换键，2.5 秒后自动隐藏
+    let galNavTimer = null;
+    $('detailGalleryWrap').addEventListener('click', (e) => {
+      if (e.target.closest('.gal-nav')) return;
+      const wrap = $('detailGalleryWrap');
+      wrap.classList.add('show-nav');
+      clearTimeout(galNavTimer);
+      galNavTimer = setTimeout(() => wrap.classList.remove('show-nav'), 2500);
+    });
+
+    function updateDetailDots() {
+      const gallery = $('detailGallery');
+      if (!gallery.clientWidth) return;
+      const idx = Math.round(gallery.scrollLeft / gallery.clientWidth);
+      $('detailDots').querySelectorAll('[data-dot]').forEach((d, i) => {
+        d.className = 'h-1.5 rounded-full shadow transition-all ' + (i === idx ? 'w-4 bg-white' : 'w-1.5 bg-white/60');
+      });
+    }
+    $('detailGallery').addEventListener('scroll', updateDetailDots, { passive: true });
+
+    function renderDetail() {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it) return;
+      const body = $('detailBody');
+      const typeChip = 'rounded-lg px-2 py-1 text-[11px] ' +
+        (it.type === 'lost' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600');
+
+      if (detailMode === 'view') {
+        body.innerHTML = `
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-bold text-slate-800">${esc(it.title)}</h2>
+            ${statusBadgeHTML(it)}
+            <span class="ml-auto ${typeChip}">${it.type === 'lost' ? '寻物' : '招领'}</span>
+          </div>
+          <p class="mt-2 text-sm leading-relaxed text-slate-500">${esc(it.desc)}</p>
+
+          <div class="mt-4 space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
+            <div class="flex items-center gap-2">
+              <span class="w-16 shrink-0 text-xs text-slate-400">地点</span>
+              <span class="place-chip ${placeTone(it.campus, it.place)}">📍 ${esc(it.place)}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-16 shrink-0 text-xs text-slate-400">补充信息</span>
+              <span class="text-xs text-slate-500">${esc(it.placeInfo || '无')}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-16 shrink-0 text-xs text-slate-400">时间</span>
+              <span class="text-xs text-slate-500">${esc(it.timeText)}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-16 shrink-0 text-xs text-slate-400">校区</span>
+              <span class="text-xs text-slate-500">${esc(it.campus)}</span>
+            </div>
+          </div>
+
+          <button type="button" data-detail-profile="${it.mine ? '__self__' : esc(it.user)}"
+            class="mt-3 flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left transition hover:border-blue-200 hover:bg-blue-50/50">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm ${it.avatar}">${esc((it.user || '同')[0])}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-semibold text-slate-700">${esc(it.user)}</span>
+              <span class="mt-0.5 block text-xs text-slate-400">☎ ${esc(formatPhone(it.phone))}</span>
+              <span class="mt-0.5 block text-[11px] text-blue-500">点击查看个人中心</span>
+            </span>
+            <span class="shrink-0 text-slate-300">›</span>
+          </button>
+
+          ${it.mine ? `
+          <div class="mt-3 rounded-2xl border border-slate-100 bg-white p-4">
+            <p class="text-xs font-bold text-slate-700">修改物品状态</p>
+            <p class="mt-1 text-[11px] text-slate-400">仅自己可见；标记为「${it.type === 'lost' ? '已找到' : '已归还'}」后不再置顶，可随时改回</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button type="button" data-status-pick="searching"
+                class="place-chip ${detailStatusPick === 'searching' ? 'tone-blue active' : 'tone-slate'}">${it.type === 'lost' ? '寻找中' : '认领中'}</button>
+              <button type="button" data-status-pick="done"
+                class="place-chip ${detailStatusPick === 'done' ? 'tone-emerald active' : 'tone-slate'}">${it.type === 'lost' ? '已找到' : '已归还'}</button>
+            </div>
+            <button id="applyStatusBtn" type="button"
+              class="mt-3 w-full rounded-xl bg-blue-600 py-2.5 text-xs font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700">
+              更改
+            </button>
+          </div>
+
+          <button type="button" id="deleteItemBtn"
+            class="mt-3 w-full rounded-xl bg-white py-2.5 text-xs font-medium text-rose-500 ring-1 ring-rose-100 transition hover:bg-rose-50">
+            删除这条动态
+          </button>` : ''}`;
+        $('editCancelBtn').classList.add('hidden');
+        $('detailActionText').textContent = it.mine ? '修改信息' : '联系对方';
+      } else {
+        body.innerHTML = `
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-lg font-bold text-slate-800">修改信息</h2>
+            <span class="ml-auto ${typeChip}">${it.type === 'lost' ? '我丢失的物品' : '我找到的失物'}</span>
+          </div>
+
+          <p class="f-label mt-4">物品图片<span class="ml-2 font-normal text-slate-400">（可多张）</span></p>
+          <div id="edImageList" class="flex flex-wrap gap-2"></div>
+          <p id="edImageHint" class="mt-2 text-[11px] text-slate-400">支持 JPG / PNG，可上传多张，首页仅显示第一张图片；拖动图片可调整顺序</p>
+          <input id="edImage" type="file" accept="image/*" multiple class="hidden" />
+
+          <p class="f-label mt-4">物品名称</p>
+          <input id="edTitle" class="f-input" maxlength="20" value="${esc(it.title)}" />
+
+          <p class="f-label mt-4">物品描述</p>
+          <textarea id="edDesc" rows="3" class="f-input resize-none">${esc(it.desc)}</textarea>
+
+          <p class="f-label mt-4">地点标签</p>
+          <div id="edPlaceChips" class="flex flex-wrap gap-2"></div>
+
+          <p class="f-label mt-4">补充信息</p>
+          <input id="edPlaceInfo" class="f-input" maxlength="24" value="${esc(it.placeInfo || '')}" />
+
+          <p class="f-label mt-4">丢失 / 拾取时间</p>
+          <div id="edDateQuick" class="mb-2 flex flex-wrap gap-2">
+            <button type="button" class="chip" data-ed-day="0">今天</button>
+            <button type="button" class="chip" data-ed-day="1">昨天</button>
+            <button type="button" class="chip" data-ed-day="2">前天</button>
+          </div>
+          <input id="edDate" type="date" class="f-input" />
+
+          <p class="f-label mt-4">联系方式（手机号）</p>
+          <input id="edPhone" type="tel" maxlength="13" class="f-input" value="${esc(formatPhone(it.phone))}" />
+
+          <p id="edError" class="mt-3 hidden text-xs text-rose-500"></p>`;
+
+        $('editCancelBtn').classList.remove('hidden');
+        $('detailActionText').textContent = '保存';
+        edPlace = it.place;
+        renderEdPlaceChips();
+        renderEdImageList();
+        $('edDate').value = it.date;
+        syncEdDateQuick();
+      }
+    }
+
+    /* 图片编辑（发布 / 修改信息共用）：多图上传 + 单张删除 */
+    const MAX_IMGS = 6;
+
+    function renderImageEditor(containerId, list, inputId, removeAttr) {
+      const box = $(containerId);
+      if (!box) return;
+      const addTile = '<label for="' + inputId + '" class="flex h-16 w-16 shrink-0 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400 transition hover:border-blue-300 hover:text-blue-500">' +
+        '<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>' +
+        '<span class="mt-0.5 text-[10px]">添加</span></label>';
+      box.innerHTML = list.map((im, i) =>
+        '<div draggable="true" data-img-item data-img-index="' + i + '" title="拖动可调整顺序" ' +
+          'class="relative h-16 w-16 shrink-0 cursor-move overflow-hidden rounded-xl ring-1 ring-slate-200 transition">' +
+          '<img src="' + im.thumb + '" alt="图片 ' + (i + 1) + '" draggable="false" class="pointer-events-none h-full w-full object-cover" />' +
+          '<span class="pointer-events-none absolute bottom-0.5 left-0.5 rounded-full bg-black/45 px-1.5 text-[9px] text-white">' + (i + 1) + '</span>' +
+          '<button type="button" ' + removeAttr + '="' + i + '" aria-label="删除图片" class="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-[10px] text-white">✕</button>' +
+        '</div>').join('') + (list.length < MAX_IMGS ? addTile : '');
+    }
+
+    /* 拖动排序：发布 / 修改信息两处的图片列表通用（HTML5 拖放，鼠标拖动） */
+    function imageDragContext(el) {
+      if (el.closest && el.closest('#pubImageList')) return { list: pubImgs, rerender: renderPubImageList };
+      if (el.closest && el.closest('#edImageList')) {
+        return { list: edImgs, rerender: () => { renderEdImageList(); refreshDetailTopImage(); } };
+      }
+      return null;
+    }
+    function clearDropMarks() {
+      document.querySelectorAll('[data-img-item]').forEach((n) => n.classList.remove('dragging', 'drop-target'));
+    }
+    let dragCtx = null, dragIdx = -1;
+
+    document.addEventListener('dragstart', (e) => {
+      const tile = e.target && e.target.closest ? e.target.closest('[data-img-item]') : null;
+      if (!tile) return;
+      dragCtx = imageDragContext(tile);
+      if (!dragCtx) return;
+      dragIdx = Number(tile.dataset.imgIndex);
+      tile.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', String(dragIdx)); } catch (err) {}
+      }
+    });
+    document.addEventListener('dragover', (e) => {
+      if (!dragCtx) return;
+      const tile = e.target && e.target.closest ? e.target.closest('[data-img-item]') : null;
+      if (!tile) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      const over = Number(tile.dataset.imgIndex);
+      document.querySelectorAll('[data-img-item]').forEach((n) => {
+        n.classList.toggle('drop-target', Number(n.dataset.imgIndex) === over && over !== dragIdx);
+      });
+    });
+    document.addEventListener('drop', (e) => {
+      if (!dragCtx) return;
+      const tile = e.target && e.target.closest ? e.target.closest('[data-img-item]') : null;
+      if (!tile) { clearDropMarks(); dragCtx = null; dragIdx = -1; return; }
+      e.preventDefault();
+      const to = Number(tile.dataset.imgIndex);
+      const list = dragCtx.list;
+      if (to !== dragIdx && to >= 0 && dragIdx >= 0 && to < list.length && dragIdx < list.length) {
+        const moved = list.splice(dragIdx, 1)[0];
+        list.splice(to, 0, moved);
+        dragCtx.rerender();
+        toast('已调整顺序，第 ' + (to + 1) + ' 张为首页展示图');
+      }
+      clearDropMarks();
+      dragCtx = null;
+      dragIdx = -1;
+    });
+    document.addEventListener('dragend', () => { clearDropMarks(); dragCtx = null; dragIdx = -1; });
+
+    // 读取多个文件 → 逐张压缩（320 缩略图 + 1024 高清图）→ 追加到目标数组
+    function addImagesFromFiles(files, target, afterEach) {
+      const picked = Array.prototype.slice.call(files).filter((f) => /^image\//.test(f.type));
+      if (!picked.length) { toast('请选择图片文件'); return; }
+      const room = MAX_IMGS - target.length;
+      if (room <= 0) { toast('最多上传 ' + MAX_IMGS + ' 张图片'); return; }
+      if (picked.length > room) toast('最多上传 ' + MAX_IMGS + ' 张图片');
+
+      picked.slice(0, room).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const thumb = compressTo(img, 320, 0.72);
+            const large = compressTo(img, 1024, 0.82);
+            target.push({ thumb: thumb.url, large: large.url });
+            afterEach();
+          };
+          img.onerror = () => toast('图片读取失败');
+          img.src = reader.result;
+        };
+        reader.onerror = () => toast('图片读取失败');
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /* 编辑态图片 */
+    function renderEdImageList() {
+      renderImageEditor('edImageList', edImgs, 'edImage', 'data-ed-img-remove');
+    }
+    function refreshDetailTopImage() {
+      renderDetailGallery({ imgs: edImgs });
+    }
+    function handleEdImage(input) {
+      if (!input.files || !input.files.length) return;
+      addImagesFromFiles(input.files, edImgs, () => { renderEdImageList(); refreshDetailTopImage(); });
+      input.value = '';
+    }
+
+    function renderEdPlaceChips() {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it) return;
+      $('edPlaceChips').innerHTML = (CAMPUS_PLACES[it.campus] || []).map((p) =>
+        '<button type="button" class="place-chip ' + p.tone + (p.name === edPlace ? ' active' : '') +
+        '" data-ed-place="' + p.name + '">' + p.name + '</button>').join('');
+    }
+
+    function syncEdDateQuick() {
+      const days = Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse($('edDate').value || todayStr())) / 86400000));
+      document.querySelectorAll('#edDateQuick .chip').forEach((c) => c.classList.toggle('chip-active', Number(c.dataset.edDay) === days));
+    }
+
+    function startDetailEdit() {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it || !it.mine) return;
+      detailMode = 'edit';
+      edImgs = (it.imgs || []).slice();
+      renderDetail();
+    }
+
+    async function saveDetailEdit() {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it) return;
+      const err = $('edError');
+      const fail = (m) => { err.textContent = m; err.classList.remove('hidden'); };
+      err.classList.add('hidden');
+
+      const title = $('edTitle').value.trim();
+      const phone = $('edPhone').value.replace(/\D/g, '');
+      if (!title) return fail('请填写物品名称');
+      if (!edPlace) return fail('请选择地点标签');
+      if (!/^1\d{10}$/.test(phone)) return fail('请填写正确的 11 位手机号');
+
+      const date = $('edDate').value || it.date;
+      const days = Math.max(0, Math.round((Date.parse(todayStr()) - Date.parse(date)) / 86400000));
+
+      it.title = title;
+      it.desc = $('edDesc').value.trim() || '暂无更多描述';
+      it.imgs = edImgs.slice();
+      it.place = edPlace;
+      it.placeInfo = $('edPlaceInfo').value.trim();
+      it.phone = phone;
+      it.date = date;
+      it.days = days;
+      it.timeText = timeTextFromDays(days, it.timeText);
+
+      detailMode = 'view';
+      renderDetail();   // 详情页回到查看态
+      renderDetailGallery(it);
+      renderCards();    // 列表同步刷新（置顶顺序重新计算）
+      if (apiOnline && it.serverId) {
+        try {
+          await api('/items/' + it.serverId, { method: 'PUT', body: {
+            title: it.title, desc: it.desc, place: it.place, place_info: it.placeInfo,
+            phone: it.phone, imgs: it.imgs, date: it.date, campus: it.campus
+          }});
+          await syncFromServer(true);
+        } catch (e) {
+          toast('同步后端失败：' + e.message);
+        }
+      }
+      toast('已保存修改');
+    }
+
+    function openDetail(id) {
+      const it = items.find((x) => x.id === id);
+      if (!it) return;
+      currentDetailId = id;
+      detailMode = 'view';
+      detailStatusPick = it.status;
+      renderDetailGallery(it);
+      renderDetail();
+      $('detailScroll').scrollTop = 0;
+      openView('detailView');
+    }
+
+    // 详情页内的交互（修改状态 / 编辑态选地点、选时间、删图）
+    $('detailBody').addEventListener('click', (e) => {
+      const prof = e.target.closest('[data-detail-profile]');
+      if (prof) {                                   // 详情页点发布者信息栏 → 对应个人中心
+        const t = prof.dataset.detailProfile;
+        if (t === '__self__') openPersonalCenter(); else openUserProfile(t, currentDetailId);
+        return;
+      }
+      if (e.target.closest('#applyStatusBtn')) { applyStatusChange(); return; }
+      if (e.target.closest('#deleteItemBtn')) { confirmDeleteItem(); return; }
+      const pick = e.target.closest('[data-status-pick]');
+      if (pick) { detailStatusPick = pick.dataset.statusPick; renderDetail(); return; }
+
+      if (e.target.closest('[data-ed-img-remove]')) {
+        const i = Number(e.target.closest('[data-ed-img-remove]').dataset.edImgRemove);
+        edImgs.splice(i, 1);
+        renderEdImageList();
+        refreshDetailTopImage();
+        return;
+      }
+
+      const place = e.target.closest('[data-ed-place]');
+      if (place) { edPlace = place.dataset.edPlace; renderEdPlaceChips(); return; }
+
+      const day = e.target.closest('[data-ed-day]');
+      if (day) { $('edDate').value = dateStrFromDaysAgo(Number(day.dataset.edDay)); syncEdDateQuick(); }
+    });
+    $('detailBody').addEventListener('change', (e) => {
+      if (e.target.id === 'edDate') syncEdDateQuick();
+      if (e.target.id === 'edImage') handleEdImage(e.target);
+    });
+
+    // 右下角按钮：联系对方 / 修改信息 / 保存
+    $('detailActionBtn').addEventListener('click', () => {
+      const it = items.find((x) => x.id === currentDetailId);
+      if (!it) return;
+      if (detailMode === 'edit') { saveDetailEdit(); return; }
+      if (it.mine) { startDetailEdit(); return; }
+      openChat(it.id);
+    });
+    $('editCancelBtn').addEventListener('click', () => {
+      const it = items.find((x) => x.id === currentDetailId);
+      detailMode = 'view';
+      renderDetail();
+      if (it) renderDetailGallery(it);   // 取消编辑 → 顶部图片还原
+    });
+
+    /* ================= 全屏视图：聊天 ================= */
+    const EMOJIS = ['😀','😃','😄','😁','😊','🙂','😉','😍','🤔','😅','😂','🥲','😢','😭','😡','👍',
+                    '👏','🙏','🤝','🎉','❤️','🔥','✨','📚','🎒','💳','🎧','☂️','🔑','📱','🥤','🍜'];
+
+    let currentChatId = null;
+    let currentChatUser = '';
+
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const nowHM = () => { const d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+
+    // 对方的头像底色（按昵称取固定颜色）
+    const PEER_TONES = ['bg-sky-100', 'bg-violet-100', 'bg-emerald-100', 'bg-amber-100', 'bg-rose-100', 'bg-teal-100', 'bg-indigo-100'];
+    function peerAvatar(name) {
+      let h = 0;
+      const s = name || '';
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997;
+      return PEER_TONES[h % PEER_TONES.length];
+    }
+    // 会话里的「对方」：自己发布 → 联系你的人；别人发布 → 发布者
+    function peerNameOf(it) { return it.mine ? (it.peer || '对方') : it.user; }
+
+    // 头像按钮：自己的 → 个人中心；对方的 → 「XXX 的个人中心」
+    function avatarBtn(mine, it) {
+      const peer = peerNameOf(it);
+      const target = mine ? '__self__' : peer;
+      const cls = mine ? 'bg-blue-100' : peerAvatar(peer);
+      const text = mine ? '我' : (peer || '同')[0];
+      return '<button type="button" data-profile="' + esc(target) + '" aria-label="查看个人中心" ' +
+        'class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs ' + cls + '">' + esc(text) + '</button>';
+    }
+
+    function msgHTML(m, it) {
+      const mine = m.from === 'me';
+      const bubble = '<div class="whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ' +
+        (mine ? 'rounded-tr-sm bg-blue-600 text-white' : 'rounded-tl-sm bg-white text-slate-700') + '">' + esc(m.text) + '</div>';
+      // 已读 / 未读：显示在自己发出的消息下方
+      const receipt = mine
+        ? '<span class="mt-1 block text-right text-[10px] ' + (m.read ? 'text-slate-400' : 'text-blue-500') + '">' +
+          (m.read ? '已读' : '未读') + '</span>'
+        : '';
+      const cell = '<div class="max-w-[76%]">' + bubble + receipt + '</div>';
+      return '<div class="flex items-end gap-2 ' + (mine ? 'justify-end' : 'justify-start') + '">' +
+        (mine ? '' : avatarBtn(false, it)) + cell + (mine ? avatarBtn(true, it) : '') + '</div>';
+    }
+
+    function renderChat() {
+      const it = items.find((x) => x.id === currentChatId);
+      if (!it) return;
+      const list = chats[currentChatId] || [];
+      $('chatMessages').innerHTML =
+        '<div class="pb-1 text-center text-[11px] text-slate-400">今天</div>' +
+        (list.length
+          ? list.map((m) => msgHTML(m, it)).join('')
+          : '<p class="pt-8 text-center text-xs text-slate-400">还没有消息，发送第一条吧</p>');
+      const box = $('chatMessages');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function openChat(id) {
+      const it = items.find((x) => x.id === id);
+      if (!it) return;
+      currentChatId = id;
+      const peer = peerNameOf(it);
+      currentChatUser = peer;
+      if (!chats[id]) chats[id] = [];   // 不预置任何演示消息，只显示真实对话
+      $('chatAvatar').className = 'flex h-9 w-9 items-center justify-center rounded-full text-sm ' + peerAvatar(peer);
+      $('chatAvatar').textContent = (peer || '同')[0];
+      $('chatName').textContent = peer;
+      $('chatInput').value = '';
+      togglePanels(null);
+      updateSendBtn();
+      renderChat();
+      openView('chatView');
+    }
+
+    function updateSendBtn() {
+      $('sendBtn').classList.toggle('hidden', !$('chatInput').value.trim());
+    }
+    function togglePanels(which) {
+      $('emojiPanel').classList.toggle('hidden', which !== 'emoji');
+      $('morePanel').classList.toggle('hidden', which !== 'more');
+    }
+
+    function sendMessage() {
+      const input = $('chatInput');
+      const text = input.value.trim();
+      if (!text || !currentChatId) return;
+      const chatId = currentChatId;
+      if (!chats[chatId]) chats[chatId] = [];
+      const msg = { from: 'me', text: text, time: nowHM(), read: false };  // 新消息先显示“未读”
+      chats[chatId].push(msg);
+      input.value = '';
+      updateSendBtn();
+      renderChat();
+      // 演示：对方稍后“已读”（真实环境由服务端回执）
+      setTimeout(() => {
+        msg.read = true;
+        if (currentChatId === chatId) renderChat();
+      }, 1500);
+    }
+
+    // 消息：会话列表（直接渲染在个人中心抽屉里）
+    function msgListHTML() {
+      const ids = Object.keys(chats);
+      if (!ids.length) return '<p class="py-8 text-center text-xs text-slate-400">暂无消息</p>';
+      return ids.map((id) => {
+        const it = items.find((x) => x.id === id);
+        if (!it) return '';
+        const list = chats[id] || [];
+        const last = list[list.length - 1] || {};
+        const peer = peerNameOf(it);
+        const unread = list.some((m) => m.from === 'me' && !m.read);
+        return '<button type="button" data-msg-item="' + id + '" class="flex w-full items-center gap-3 rounded-2xl border border-slate-100 px-3.5 py-3 text-left transition hover:bg-slate-50">' +
+          '<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm text-slate-600 ' + peerAvatar(peer) + '">' + esc((peer || '同')[0]) + '</span>' +
+          '<span class="min-w-0 flex-1">' +
+            '<span class="flex items-center gap-2">' +
+              '<span class="truncate text-sm font-semibold text-slate-800">' + esc(peer) + '</span>' +
+              (unread ? '<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600"></span>' : '') +
+            '</span>' +
+            '<span class="mt-0.5 block truncate text-[11px] text-slate-400">' + esc(it.title) + ' · ' + esc(last.text || '') + '</span>' +
+          '</span>' +
+          '<span class="ml-auto shrink-0 text-[10px] text-slate-400">' + esc(last.time || '') + '</span>' +
+        '</button>';
+      }).join('');
+    }
+    // 点击聊天头像 → 自己 / 对方的个人中心
+    $('chatMessages').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-profile]');
+      if (!btn) return;
+      const target = btn.dataset.profile;
+      if (target === '__self__') openPersonalCenter();
+      else openUserProfile(target, currentChatId);
+    });
+    $('chatAvatar').addEventListener('click', () => { if (currentChatUser) openUserProfile(currentChatUser, currentChatId); });
+
+    $('sendBtn').addEventListener('click', sendMessage);
+    $('chatInput').addEventListener('input', updateSendBtn);
+    $('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+    $('emojiBtn').addEventListener('click', () => togglePanels($('emojiPanel').classList.contains('hidden') ? 'emoji' : null));
+    $('moreBtn').addEventListener('click', () => togglePanels($('morePanel').classList.contains('hidden') ? 'more' : null));
+    $('emojiGrid').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-emoji]');
+      if (!btn) return;
+      $('chatInput').value += btn.dataset.emoji;
+      updateSendBtn();
+      $('chatInput').focus();
+    });
+    $('morePanel').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-more]');
+      if (btn) toast('「' + btn.dataset.more + '」功能暂未开放');
+    });
+    $('emojiGrid').innerHTML = EMOJIS.map((e2) =>
+      '<button type="button" data-emoji="' + e2 + '" class="rounded-lg py-1 text-xl transition hover:bg-slate-100">' + e2 + '</button>'
+    ).join('');
+
+    /* ================= 滚动行为：简化搜索框 + 回到顶部 ================= */
+    const searchCard = $('searchCard');
+    const NAV_H = 56;              // 吸顶栏高度（tab 行）
+    let lastScrollY = window.scrollY;
+
+    function onScroll() {
+      const y = window.scrollY;
+      const covered = searchCard.getBoundingClientRect().bottom <= NAV_H;  // 完整搜索框已被吸顶栏覆盖
+      const goingUp = y < lastScrollY - 1;
+      const goingDown = y > lastScrollY + 1;
+      lastScrollY = y;
+
+      if (!covered) $('miniSearch').classList.remove('open');   // 回到顶部 → 显示完整搜索框
+      else if (goingUp) $('miniSearch').classList.add('open');  // 覆盖后上滑 → 先出现简化搜索框
+      else if (goingDown) $('miniSearch').classList.remove('open');
+
+      $('toTopBtn').classList.toggle('open', y > 240);          // 下滑看卡片时浮现，到顶部消失
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    $('toTopBtn').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+    /* ================= 初始化 ================= */
+    renderAccountBtn();
+    renderCampusList();
+    renderPlaceChips();
+    renderStatusMenu();
+    renderTabs();
+    renderCards();
+    onScroll();
+    updateConnBadge();
+    syncFromServer(true);   // 尝试连接后端；失败则继续用本地演示数据
+  </script>
+</body>
+</html>
